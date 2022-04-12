@@ -71,7 +71,7 @@ class Mind(Nomear):
 
   @staticmethod
   def ask(history_buffer=()):
-    from lambo.gui.tkutils.simple_dialogs import ask_string
+    from pictor.tkutils.simple_dialogs import ask_string
     # Ask for command
     s = ask_string(history_buffer=history_buffer)
     if s is None: return None
