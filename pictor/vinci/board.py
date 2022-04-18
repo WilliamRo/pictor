@@ -581,7 +581,7 @@ class Board(Nomear):
       path += '.{}'.format(fmt)
 
     # Find movie writer
-    writer = animation.FFMpegWriter(fps=fps)
+    writer = None if fmt == 'gif' else animation.FFMpegWriter(fps=fps)
 
     # Create animation
     tgt = 'objects' if which == 'o' else 'layers'
