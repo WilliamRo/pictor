@@ -307,8 +307,8 @@ class Board(Nomear):
   def move_to_center(self):
     """Should be called after window has been shown"""
     if self.backend_is_TkAgg:
-      from pictor.tkutils.misc import centerize_window
-      centerize_window(self.window)
+      from roma.art import center
+      center(self.window)
     else:
       pass
 

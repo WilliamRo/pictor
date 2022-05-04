@@ -14,6 +14,7 @@
 # ==-=======================================================================-===
 from roma import console
 from roma import Nomear
+from roma.art import ask_string
 
 import inspect
 
@@ -71,7 +72,6 @@ class Mind(Nomear):
 
   @staticmethod
   def ask(history_buffer=()):
-    from pictor.tkutils.simple_dialogs import ask_string
     # Ask for command
     s = ask_string(history_buffer=history_buffer)
     if s is None: return None

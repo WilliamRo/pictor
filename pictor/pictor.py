@@ -12,15 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====-==================================================================-======
-from pictor.basis.easel import Easel
+from roma import Easel
 
 
 
 class Pictor(Easel):
 
-  def __init__(self):
+  def __init__(self, title='Pictor'):
     # Call parent's constructor
     super(Pictor, self).__init__()
+
+
+  def yell(self, text):
+    self.title = text
 
 
 
