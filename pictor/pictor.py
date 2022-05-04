@@ -11,10 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ======-=========================================================-=============
-from pictor.pictor import Pictor
+# ====-==================================================================-======
+from pictor.basis.easel import Easel
 
-# ------------------------------------------------------------------------------
-# Deprecated Objects
-# ------------------------------------------------------------------------------
-from pictor.vinci.vinci import DaVinci
+
+
+class Pictor(Easel):
+
+  def __init__(self):
+    # Call parent's constructor
+    super(Pictor, self).__init__()
+
+
+
+if __name__ == '__main__':
+  p = Pictor()
+  p.show()
+

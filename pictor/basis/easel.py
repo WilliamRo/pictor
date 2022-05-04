@@ -11,10 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ======-=========================================================-=============
-from pictor.pictor import Pictor
+# =-===========================================================================-
+"""An easel holds the canvas. It is the direct parent-class for Pictor"""
+from pictor.basis.frame import Frame
+from pictor.basis.shortcuts import Shortcuts
 
-# ------------------------------------------------------------------------------
-# Deprecated Objects
-# ------------------------------------------------------------------------------
-from pictor.vinci.vinci import DaVinci
+
+
+class Easel(Frame):
+
+  def __init__(self):
+
+    # Call parent's constructor. As the top frame, an Easel has no master Frame.
+    super(Easel, self).__init__()
+
+    # An Easel has a shortcut
+    self.shortcuts = Shortcuts(easel=self)
+
+
+
+if __name__ == '__main__':
+  easel = Easel()
+  easel.show()
