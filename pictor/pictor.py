@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====-==================================================================-======
+from .plotters import Plotter
+from .widgets import Canvas
+
 from roma import Easel
 from typing import Callable
+
+import tkinter as tk
 
 
 
@@ -23,19 +28,25 @@ class Pictor(Easel):
     OBJECTS = 'ObJeCtS'
     PLOTTERS = 'PlOtTeRs'
 
-  def __init__(self, title='Pictor'):
+  def __init__(self, title='Pictor', figure_size=(5, 5)):
     # Call parent's constructor
     super(Pictor, self).__init__()
 
     # Set window title
     self.static_title = title
 
+    # Register widgets
+    self.canvas = Canvas(self, figure_size=figure_size)
+
     # Create dimensions for objects and layers
     self.create_dimension(self.Keys.OBJECTS)
     self.create_dimension(self.Keys.PLOTTERS)
 
     # Register common events
-    self._register_key_events()
+    self._register_default_key_events()
+
+    # Set layout
+    self._set_default_layout()
 
   # region: Properties
 
@@ -50,8 +61,27 @@ class Pictor(Easel):
 
   # region: Private Methods
 
-  def _register_key_events(self):
-    pass
+  def _register_default_key_events(self):
+    # Four directions
+    self.shortcuts.register_key_event(
+      ['j', 'down'],
+      lambda: self.set_cursor(self.Keys.OBJECTS, 1, refresh=True),
+      description='Next object', color='yellow')
+    self.shortcuts.register_key_event(
+      ['k', 'up'],
+      lambda: self.set_cursor(self.Keys.OBJECTS, -1, refresh=True),
+      description='Previous object', color='yellow')
+    self.shortcuts.register_key_event(
+      ['h', 'left'],
+      lambda: self.set_cursor(self.Keys.PLOTTERS, 1, refresh=True),
+      description='Next plotter', color='yellow')
+    self.shortcuts.register_key_event(
+      ['l', 'right'],
+      lambda: self.set_cursor(self.Keys.PLOTTERS, -1, refresh=True),
+      description='Previous plotter', color='yellow')
+
+  def _set_default_layout(self):
+    self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
   # endregion: Private Methods
 
@@ -60,10 +90,14 @@ class Pictor(Easel):
   def add_plotter(self, plotter: Callable, index: int = -1):
     if not callable(plotter):
       raise ValueError('!! A plotter should be callable')
+    if not isinstance(plotter, Plotter): plotter = Plotter(plotter)
     self.add_to_axis(self.Keys.PLOTTERS, plotter, index=index)
 
   def refresh(self):
+    # Refresh title
     self.title = f'{self.cursor_string} {self.static_title}'
+    # Refresh canvas
+    self.canvas.refresh()
 
   # endregion: Public Methods
 
@@ -74,11 +108,3 @@ class Pictor(Easel):
     self.title = text
 
   # endregion: Builtin Commands
-
-
-
-if __name__ == '__main__':
-  p = Pictor()
-  p.objects = [1, 2, 3]
-  p.show()
-
