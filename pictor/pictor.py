@@ -106,8 +106,4 @@ class Pictor(Easel):
 
   # region: Builtin Commands
 
-  def yell(self, text):
-    """Doc string ..."""
-    self.title = text
-
   # endregion: Builtin Commands
