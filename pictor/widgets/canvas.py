@@ -13,7 +13,7 @@
 # limitations under the License.
 # ====-=============================================================-===========
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from roma import Easel
+from mpl_toolkits.mplot3d import Axes3D
 
 from .widget_base import WidgetBase
 
@@ -23,15 +23,51 @@ import matplotlib.pyplot as plt
 
 class Canvas(WidgetBase):
 
-  def __init__(self, master: Easel, figure_size=(5, 5)):
-    self.master = master
+  class Keys:
+    AXES2D = 'AxEs2d'
+    AXES3D = 'AxEs3d'
+
+  def __init__(self, pictor, figure_size=(5, 5)):
+    from ..pictor import Pictor
+    self.pictor: Pictor = pictor
     self.figure = plt.Figure(figsize=figure_size)
-    self._canvas = FigureCanvasTkAgg(self.figure, master=self.master)
+    self._canvas = FigureCanvasTkAgg(self.figure, master=self.pictor)
 
     # Call parent's constructor
     super(Canvas, self).__init__(self._canvas.get_tk_widget())
 
+  # region: Properties
+
+  @WidgetBase.property(key=Keys.AXES2D)
+  def axes2D(self) -> plt.Axes:
+    return self.figure.add_subplot(111)
+
+  @WidgetBase.property(key=Keys.AXES3D)
+  def axes3D(self) -> Axes3D:
+    return self.figure.add_subplot(111, projection='3d')
+
+  @WidgetBase.property()
+  def default_plotter(self):
+    from ..plotters.prompter import Prompter
+    return Prompter(self.pictor, obj_as_text=False, text='No plotter found')
+
+  # endregion: Properties
+
   # region: Private Methods
+
+  def _clear(self):
+    # Clear 2D axes if exists
+    if self.in_pocket(self.Keys.AXES2D):
+      self.get_from_pocket(self.Keys.AXES2D, put_back=False)
+
+    # Clear 3D axes if exists
+    if self.in_pocket(self.Keys.AXES3D):
+      axes3d = self.get_from_pocket(self.Keys.AXES3D, put_back=False)
+      # TODO: save view angle if necessary
+      # view_angle = (axes3d.elev, axes3d.azim)
+
+    # Clear figure
+    self.figure.clear()
 
   # endregion: Private Methods
 
@@ -40,8 +76,8 @@ class Canvas(WidgetBase):
   def refresh(self):
     from ..pictor import Pictor
     # Get active plotter
-    plotter = self.master.get_element(Pictor.Keys.PLOTTERS)
-    if plotter is None: plotter = lambda: self.show_message('No plotter found')
+    plotter = self.pictor.get_element(Pictor.Keys.PLOTTERS)
+    if plotter is None: plotter = self.default_plotter
 
     # Call plotter
     plotter()
@@ -50,13 +86,3 @@ class Canvas(WidgetBase):
     self._canvas.draw()
 
   # endregion: Abstract Methods
-
-  # region: Builtin Plotters
-
-  def show_message(self, text):
-    ax: plt.Axes = self.figure.add_subplot(111)
-    ax.cla()
-    ax.text(0.5, 0.5, text, ha='center', va='center')
-    ax.set_axis_off()
-
-  # endregion: Builtin Plotters

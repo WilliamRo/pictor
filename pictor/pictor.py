@@ -93,7 +93,8 @@ class Pictor(Easel):
   def add_plotter(self, plotter: Callable, index: int = -1):
     if not callable(plotter):
       raise ValueError('!! A plotter should be callable')
-    if not isinstance(plotter, Plotter): plotter = Plotter(plotter)
+    if not isinstance(plotter, Plotter):
+      plotter = Plotter(plotter, self)
     self.add_to_axis(self.Keys.PLOTTERS, plotter, index=index)
 
   def refresh(self):

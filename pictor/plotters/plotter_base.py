@@ -15,13 +15,45 @@
 from roma import Nomear
 from typing import Callable
 
+import inspect
+
 
 
 class Plotter(Nomear):
 
-  def __init__(self, func: Callable):
+  def __init__(self, func: Callable, pictor):
+    from ..pictor import Pictor
     self.func: Callable = func
+    self.pictor: Pictor = pictor
 
+  # region: Properties
 
-  def __call__(self, *args, **kwargs):
-    self.func(*args, **kwargs)
+  @property
+  def argument_keys(self):
+    return list(inspect.signature(self.func).parameters.keys())
+
+  # endregion: Properties
+
+  # region: MISC
+
+  def __call__(self):
+    # Try to get key-word arguments for method according to its signature
+    kwargs = {}
+    for k in self.argument_keys:
+      if k in ('obj', 'x'):
+        kwargs[k] = self.pictor.get_element(self.pictor.Keys.OBJECTS)
+      elif k in ('canvas', ):
+        kwargs[k] = self.pictor.canvas
+      elif k in ('fig', 'figure'):
+        kwargs[k] = self.pictor.canvas.figure
+      elif k in ('ax', 'axes', 'ax2d', 'axes2d'):
+        kwargs[k] = self.pictor.canvas.axes2D
+      elif k in ('ax3d', 'axes3d'):
+        kwargs[k] = self.pictor.canvas.axes3D
+      elif hasattr(self, k):
+        kwargs[k] = getattr(self, k)
+
+    # Call function
+    self.func(**kwargs)
+
+  # endregion: MISC
