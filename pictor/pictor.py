@@ -81,7 +81,10 @@ class Pictor(Easel):
       description='Previous plotter', color='yellow')
 
   def _set_default_layout(self):
+    # Pack all widgets to self
     self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+    # Finally, pack self to root
+    self.pack()
 
   # endregion: Private Methods
 

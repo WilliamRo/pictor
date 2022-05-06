@@ -26,7 +26,7 @@ class Canvas(WidgetBase):
   def __init__(self, master: Easel, figure_size=(5, 5)):
     self.master = master
     self.figure = plt.Figure(figsize=figure_size)
-    self._canvas = FigureCanvasTkAgg(self.figure, master=self.master.master)
+    self._canvas = FigureCanvasTkAgg(self.figure, master=self.master)
 
     # Call parent's constructor
     super(Canvas, self).__init__(self._canvas.get_tk_widget())
