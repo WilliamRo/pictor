@@ -30,7 +30,7 @@ class Canvas(WidgetBase):
   def __init__(self, pictor, figure_size=(5, 5)):
     from ..pictor import Pictor
     self.pictor: Pictor = pictor
-    self.figure = plt.Figure(figsize=figure_size)
+    self.figure = plt.Figure(figsize=figure_size, dpi=100)
     self._canvas = FigureCanvasTkAgg(self.figure, master=self.pictor)
 
     # Call parent's constructor
@@ -75,13 +75,11 @@ class Canvas(WidgetBase):
   # region: Abstract Methods
 
   def refresh(self):
-    from ..pictor import Pictor
-    # Get active plotter
-    plotter = self.pictor.get_element(Pictor.Keys.PLOTTERS)
-    if plotter is None: plotter = self.default_plotter
+    # Clear figure
+    self._clear()
 
-    # Call plotter
-    plotter()
+    # Call active plotter
+    self.pictor.active_plotter()
 
     # Tight layout and refresh
     self.figure.tight_layout()

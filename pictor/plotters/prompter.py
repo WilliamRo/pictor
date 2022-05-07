@@ -34,3 +34,9 @@ class Prompter(Plotter):
     ax.cla()
     ax.text(0.5, 0.5, text, ha='center', va='center')
     ax.set_axis_off()
+
+
+  def set_text(self, val: str):
+    self.text = val
+    self.refresh()
+

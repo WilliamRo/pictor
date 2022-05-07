@@ -57,11 +57,20 @@ class Pictor(Easel):
   def objects(self, value):
     self.set_to_axis(self.Keys.OBJECTS, value, overwrite=True)
 
+  @property
+  def active_plotter(self) -> Plotter:
+    plotter = self.get_element(self.Keys.PLOTTERS)
+    if plotter is None: return self.canvas.default_plotter
+    return plotter
+
   # endregion: Properties
 
   # region: Private Methods
 
   def _register_default_key_events(self):
+    # Allow plotter shortcuts
+    self.shortcuts.external_fetcher = self._get_plotter_shortcuts
+
     # Four directions
     self.shortcuts.register_key_event(
       ['j', 'down'],
@@ -86,6 +95,15 @@ class Pictor(Easel):
     # Finally, pack self to root
     self.pack()
 
+  def _get_attribute(self, key, default_value):
+    """This method helps commander to access to plotters"""
+    if hasattr(self, key): return getattr(self, key)
+    return getattr(self.active_plotter, key, default_value)
+
+  def _get_plotter_shortcuts(self):
+    """This method help Shortcut to access to plotters """
+    return self.active_plotter.shortcuts
+
   # endregion: Private Methods
 
   # region: Public Methods
@@ -97,7 +115,7 @@ class Pictor(Easel):
       plotter = Plotter(plotter)
 
     # Set master
-    plotter.register(self)
+    plotter.register_to_master(self)
     self.add_to_axis(self.Keys.PLOTTERS, plotter, index=index)
 
   def refresh(self):
