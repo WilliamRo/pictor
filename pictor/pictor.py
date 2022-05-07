@@ -94,7 +94,10 @@ class Pictor(Easel):
     if not callable(plotter):
       raise ValueError('!! A plotter should be callable')
     if not isinstance(plotter, Plotter):
-      plotter = Plotter(plotter, self)
+      plotter = Plotter(plotter)
+
+    # Set master
+    plotter.register(self)
     self.add_to_axis(self.Keys.PLOTTERS, plotter, index=index)
 
   def refresh(self):
@@ -105,6 +108,13 @@ class Pictor(Easel):
 
   # endregion: Public Methods
 
-  # region: Builtin Commands
+  # region: Presets
 
-  # endregion: Builtin Commands
+  @staticmethod
+  def image_viewer(title='Image Viewer', figure_size=(5, 5)):
+    from .plotters import Retina
+    p = Pictor(title=title, figure_size=figure_size)
+    p.add_plotter(Retina())
+    return p
+
+  # endregion: Presets

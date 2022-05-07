@@ -13,7 +13,7 @@
 # limitations under the License.
 # ====-==================================================================-======
 from roma import Nomear
-from typing import Callable
+from typing import Callable, Optional
 
 import inspect
 
@@ -21,10 +21,13 @@ import inspect
 
 class Plotter(Nomear):
 
-  def __init__(self, func: Callable, pictor):
+  def __init__(self, func: Callable, pictor=None):
     from ..pictor import Pictor
     self.func: Callable = func
-    self.pictor: Pictor = pictor
+    self.pictor: Optional[Pictor] = None
+
+    # Register if provided
+    if pictor is not None: self.register(pictor)
 
   # region: Properties
 
@@ -33,6 +36,13 @@ class Plotter(Nomear):
     return list(inspect.signature(self.func).parameters.keys())
 
   # endregion: Properties
+
+  # region: APIs
+
+  def register(self, pictor):
+    self.pictor = pictor
+
+  # endregion: APIs
 
   # region: MISC
 

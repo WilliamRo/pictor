@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 class Prompter(Plotter):
 
-  def __init__(self, pictor, obj_as_text=True, text=None):
+  def __init__(self, obj_as_text=True, text=None, pictor=None):
     # Call parent's constructor
     if obj_as_text: func = lambda ax, obj: self.show_text(ax, obj)
     else: func = self.show_text

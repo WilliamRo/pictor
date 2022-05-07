@@ -49,7 +49,8 @@ class Canvas(WidgetBase):
   @WidgetBase.property()
   def default_plotter(self):
     from ..plotters.prompter import Prompter
-    return Prompter(self.pictor, obj_as_text=False, text='No plotter found')
+    return Prompter(obj_as_text=False, text='No plotter found',
+                    pictor=self.pictor)
 
   # endregion: Properties
 
@@ -82,7 +83,8 @@ class Canvas(WidgetBase):
     # Call plotter
     plotter()
 
-    # Flush buffer
+    # Tight layout and refresh
+    self.figure.tight_layout()
     self._canvas.draw()
 
   # endregion: Abstract Methods
