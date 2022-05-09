@@ -136,7 +136,7 @@ class Pictor(Easel):
     return p
 
   @staticmethod
-  def signal_viewer(title='Signal Viewer', figure_size=(5, 5)):
+  def signal_viewer(title='Signal Viewer', figure_size=(9, 3)):
     from .plotters import Oscilloscope
     p = Pictor(title=title, figure_size=figure_size)
     p.add_plotter(Oscilloscope())
