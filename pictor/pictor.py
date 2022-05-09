@@ -135,4 +135,11 @@ class Pictor(Easel):
     p.add_plotter(Retina())
     return p
 
+  @staticmethod
+  def signal_viewer(title='Signal Viewer', figure_size=(5, 5)):
+    from .plotters import Oscilloscope
+    p = Pictor(title=title, figure_size=figure_size)
+    p.add_plotter(Oscilloscope())
+    return p
+
   # endregion: Presets

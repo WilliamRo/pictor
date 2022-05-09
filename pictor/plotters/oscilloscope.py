@@ -11,8 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ======-=========================================================-=============
-from .oscilloscope import Oscilloscope
+# ===-==================================================================-=======
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from .plotter_base import Plotter
-from .prompter import Prompter
-from .retina import Retina
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+
+class Oscilloscope(Plotter):
+
+  def __init__(self, pictor=None):
+    # Call parent's constructor
+    super(Oscilloscope, self).__init__(self.show_signal, pictor)
+
+    # Specific attributes
+
+
+  def show_signal(self, x: np.ndarray, ax: plt.Axes):
+    ax.plot(x)
