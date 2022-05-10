@@ -90,6 +90,8 @@ class Pictor(Easel):
       description='Previous plotter', color='yellow')
 
   def _set_default_layout(self):
+    # Set main frame's background
+    self.configure(background='white')
     # Pack all widgets to self
     self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
     # Finally, pack self to root
@@ -136,7 +138,8 @@ class Pictor(Easel):
     return p
 
   @staticmethod
-  def signal_viewer(title='Signal Viewer', figure_size=(9, 3), **kwargs):
+  def signal_viewer(title='Signal Viewer', figure_size=(9, 3), outline_bar=True,
+                    **kwargs):
     from .plotters import Oscilloscope
     from .widgets import OutlineBar
 
@@ -146,9 +149,12 @@ class Pictor(Easel):
     osc = Oscilloscope(**kwargs)
     p.add_plotter(osc)
 
-    # Add an OutlineBar
-    bar = OutlineBar(p)
-    bar.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+    if outline_bar:
+      # Add an OutlineBar
+      bar = OutlineBar(p)
+      bar.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+      # Link oscilloscope to outline bar
+      osc.link_to_outline_bar(bar)
 
     return p
 

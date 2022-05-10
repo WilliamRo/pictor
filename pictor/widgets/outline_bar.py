@@ -13,9 +13,9 @@
 # limitations under the License.
 # ===-==================================================================-=======
 from .widget_base import WidgetBase
-from tkinter import ttk
 
 import tkinter as tk
+
 
 
 class OutlineBar(WidgetBase):
@@ -24,16 +24,33 @@ class OutlineBar(WidgetBase):
     from ..pictor import Pictor
     self.pictor: Pictor = pictor
 
-    self.frame = tk.Frame(master=pictor, height=height)
+    self.canvas = tk.Canvas(master=pictor, height=height)
 
     # Call parent's constructor
-    super(OutlineBar, self).__init__(tk_widget=self.frame)
+    super(OutlineBar, self).__init__(tk_widget=self.canvas)
 
   # region: Widget Style
 
   def _set_style(self):
-    self.frame.configure(
-      background='lightgrey', borderwidth=10)
+    self.canvas.configure(background='#F6F6F6')
 
   # endregion: Widget Style
+
+  # region: Public Methods
+
+  def locate(self, a, b):
+    assert 0 <= a < b <= 1
+    # Get canvas size (tricky, need to be refactored)
+    H = self.canvas.winfo_reqheight()
+    W = self.pictor.canvas._tk_widget.winfo_reqwidth() - 10
+    # Define margin
+    m = 5
+
+    x_min = max(W * a, m)
+    x_max = min(W * b, W)
+    self.canvas.delete('all')
+    self.canvas.create_rectangle(
+      x_min, m, x_max, H - m, outline='#FA8', fill='#FFF', width=2)
+
+  # endregion: Public Methods
 

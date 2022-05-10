@@ -24,8 +24,8 @@ class WidgetBase(Nomear):
     self._tk_widget: tk.Widget = tk_widget
     self._set_style()
 
-  def pack(self, side, fill, expand):
-    self._tk_widget.pack(side=side, fill=fill, expand=expand)
+  def pack(self, side, fill, expand, **kwargs):
+    self._tk_widget.pack(side=side, fill=fill, expand=expand, **kwargs)
 
   def refresh(self): pass
 

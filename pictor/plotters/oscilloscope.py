@@ -16,6 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Optional, Union
 from .plotter_base import Plotter
 from ..objects.digital_signal import DigitalSignal
+from ..widgets.outline_bar import OutlineBar
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,6 +32,7 @@ class Oscilloscope(Plotter):
     # Specific attributes
     self.signal_buffer = {}
     self._selected_signal: Optional[DigitalSignal] = None
+    self._outline_bar: Optional[OutlineBar] = None
 
     # Settable attributes
     self.new_settable_attr('default_win_size', default_win_size,
@@ -50,8 +52,17 @@ class Oscilloscope(Plotter):
 
     # Show window
     ax.set_xlim(*ds.xlim)
+    if isinstance(self._outline_bar, OutlineBar):
+      self._outline_bar.locate(*ds.window_location_pct)
 
   # endregion: Plot Method
+
+  # region: Public Methods
+
+  def link_to_outline_bar(self, outline_bar: OutlineBar):
+    self._outline_bar = outline_bar
+
+  # endregion: Public Methods
 
   # region: Commands and Shortcuts
 

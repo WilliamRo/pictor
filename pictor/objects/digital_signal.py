@@ -42,9 +42,14 @@ class DigitalSignal(object):
   def length(self): return len(self.y)
 
   @property
-  def xlim(self):
-    return (max(self.starting_index, 0),
-            min(self.starting_index + self.window_size - 1, self.length - 1))
+  def xlim(self): return (self.x[self.starting_index],
+                          self.x[self.starting_index + self.window_size - 1])
+
+  @property
+  def window_location_pct(self):
+    p_min = self.starting_index / self.length
+    p_max = p_min + self.window_size / self.length
+    return p_min, p_max
 
   # endregion: Properties
 
@@ -69,6 +74,8 @@ class DigitalSignal(object):
     ws = int(self.window_size * multiplier)
     ws = max(min(ws, self.length), 10)
     self.window_size = ws
+    # Call move_window(0) to prevent window out of bound
+    self.move_window(0)
 
   # endregion: Public Methods
 
