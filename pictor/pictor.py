@@ -101,7 +101,7 @@ class Pictor(Easel):
     return getattr(self.active_plotter, key, default_value)
 
   def _get_plotter_shortcuts(self):
-    """This method help Shortcut to access to plotters """
+    """This method help Shortcut to access to plotters"""
     return self.active_plotter.shortcuts
 
   # endregion: Private Methods
@@ -138,8 +138,18 @@ class Pictor(Easel):
   @staticmethod
   def signal_viewer(title='Signal Viewer', figure_size=(9, 3), **kwargs):
     from .plotters import Oscilloscope
+    from .widgets import OutlineBar
+
     p = Pictor(title=title, figure_size=figure_size)
-    p.add_plotter(Oscilloscope(**kwargs))
+
+    # Add an oscilloscope
+    osc = Oscilloscope(**kwargs)
+    p.add_plotter(osc)
+
+    # Add an OutlineBar
+    bar = OutlineBar(p)
+    bar.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+
     return p
 
   # endregion: Presets

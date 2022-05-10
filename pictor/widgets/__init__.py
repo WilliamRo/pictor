@@ -13,3 +13,4 @@
 # limitations under the License.
 # ======-=========================================================-=============
 from .canvas import Canvas
+from .outline_bar import OutlineBar

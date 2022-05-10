@@ -11,22 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ====-=============================================================-===========
-from roma import Nomear
+# ===-==================================================================-=======
+from .widget_base import WidgetBase
+from tkinter import ttk
 
 import tkinter as tk
 
 
+class OutlineBar(WidgetBase):
 
-class WidgetBase(Nomear):
+  def __init__(self, pictor, height=50):
+    from ..pictor import Pictor
+    self.pictor: Pictor = pictor
 
-  def __init__(self, tk_widget):
-    self._tk_widget: tk.Widget = tk_widget
-    self._set_style()
+    self.frame = tk.Frame(master=pictor, height=height)
 
-  def pack(self, side, fill, expand):
-    self._tk_widget.pack(side=side, fill=fill, expand=expand)
+    # Call parent's constructor
+    super(OutlineBar, self).__init__(tk_widget=self.frame)
 
-  def refresh(self): pass
+  # region: Widget Style
 
-  def _set_style(self): pass
+  def _set_style(self):
+    self.frame.configure(
+      background='lightgrey', borderwidth=10)
+
+  # endregion: Widget Style
+
