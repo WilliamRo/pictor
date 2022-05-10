@@ -55,8 +55,8 @@ class Oscilloscope(Plotter):
 
   # region: Commands and Shortcuts
 
-  def move_window(self, direction=1):
-    self._selected_signal.move_window(direction * self.get('step'))
+  def move_window(self, direction=1, go_extreme=False):
+    self._selected_signal.move_window(direction * self.get('step'), go_extreme)
     self.refresh()
 
   def set_win_size(self, multiplier):
@@ -64,14 +64,18 @@ class Oscilloscope(Plotter):
     self.refresh()
 
   def register_shortcuts(self):
-    self.register_a_shortcut(
-      'h', lambda: self.move_window(-1), description='Slide window to left')
-    self.register_a_shortcut(
-      'l', lambda: self.move_window(1), description='Slide window to right')
-    self.register_a_shortcut(
-      'o', lambda: self.set_win_size(2), description='Double window size')
-    self.register_a_shortcut(
-      'i', lambda: self.set_win_size(0.5), description='Halve window size')
+    self.register_a_shortcut('h', lambda: self.move_window(-1),
+                             description='Slide window to left')
+    self.register_a_shortcut('l', lambda: self.move_window(1),
+                             description='Slide window to right')
+    self.register_a_shortcut('H', lambda: self.move_window(-1, True),
+                             description='Slide window to left most')
+    self.register_a_shortcut('L', lambda: self.move_window(1, True),
+                             description='Slide window to right most')
+    self.register_a_shortcut('o', lambda: self.set_win_size(2),
+                             description='Double window size')
+    self.register_a_shortcut('i', lambda: self.set_win_size(0.5),
+                             description='Halve window size')
 
   # endregion: Commands and Shortcuts
 

@@ -50,7 +50,11 @@ class DigitalSignal(object):
 
   # region: Public Methods
 
-  def move_window(self, step_ratio):
+  def move_window(self, step_ratio, go_extreme=False):
+    # If go extreme, go home if step_ratio < 0, otherwise go end
+    if go_extreme: self.starting_index = (
+        0 if step_ratio < 0 else self.length - self.window_size)
+
     # Calculate step
     step = int(step_ratio * self.window_size)
     # Move window
