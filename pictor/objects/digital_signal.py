@@ -41,7 +41,32 @@ class DigitalSignal(object):
   @property
   def length(self): return len(self.y)
 
+  @property
+  def xlim(self):
+    return (max(self.starting_index, 0),
+            min(self.starting_index + self.window_size - 1, self.length - 1))
+
   # endregion: Properties
+
+  # region: Public Methods
+
+  def move_window(self, step_ratio):
+    # Calculate step
+    step = int(step_ratio * self.window_size)
+    # Move window
+    self.starting_index = self.starting_index + step
+    # Handle left edge condition
+    self.starting_index = max(self.starting_index, 0)
+    # Handle right edge condition
+    self.starting_index = min(
+      self.starting_index, self.length - self.window_size)
+
+  def set_window_size(self, multiplier):
+    ws = int(self.window_size * multiplier)
+    ws = max(min(ws, self.length), 10)
+    self.window_size = ws
+
+  # endregion: Public Methods
 
   # region: Static Methods
 

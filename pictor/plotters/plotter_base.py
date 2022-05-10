@@ -97,6 +97,8 @@ class Plotter(Nomear):
     else: value = _type(value)
     self.settable_attributes[key][0] = value
 
+    console.show_status(f'{self.class_name}.{key} set to {value}')
+
     # Refresh canvas
     self.refresh()
 
@@ -123,6 +125,8 @@ class Plotter(Nomear):
     for k in self.argument_keys:
       if k in ('obj', 'x'):
         kwargs[k] = self.pictor.get_element(self.pictor.Keys.OBJECTS)
+      elif k in ('i', 'index'):
+        kwargs[k] = self.pictor.cursors[self.pictor.Keys.OBJECTS]
       elif k in ('canvas', ):
         kwargs[k] = self.pictor.canvas
       elif k in ('fig', 'figure'):

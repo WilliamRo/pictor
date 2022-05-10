@@ -73,19 +73,19 @@ class Pictor(Easel):
 
     # Four directions
     self.shortcuts.register_key_event(
-      ['j', 'down'],
+      ['j', 'Down'],
       lambda: self.set_cursor(self.Keys.OBJECTS, 1, refresh=True),
       description='Next object', color='yellow')
     self.shortcuts.register_key_event(
-      ['k', 'up'],
+      ['k', 'Up'],
       lambda: self.set_cursor(self.Keys.OBJECTS, -1, refresh=True),
       description='Previous object', color='yellow')
     self.shortcuts.register_key_event(
-      ['h', 'left'],
+      ['n'],
       lambda: self.set_cursor(self.Keys.PLOTTERS, 1, refresh=True),
       description='Next plotter', color='yellow')
     self.shortcuts.register_key_event(
-      ['l', 'right'],
+      ['p'],
       lambda: self.set_cursor(self.Keys.PLOTTERS, -1, refresh=True),
       description='Previous plotter', color='yellow')
 
@@ -136,10 +136,10 @@ class Pictor(Easel):
     return p
 
   @staticmethod
-  def signal_viewer(title='Signal Viewer', figure_size=(9, 3)):
+  def signal_viewer(title='Signal Viewer', figure_size=(9, 3), **kwargs):
     from .plotters import Oscilloscope
     p = Pictor(title=title, figure_size=figure_size)
-    p.add_plotter(Oscilloscope())
+    p.add_plotter(Oscilloscope(**kwargs))
     return p
 
   # endregion: Presets
