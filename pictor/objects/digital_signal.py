@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-=====================================================================-====
+from roma import Nomear
 from typing import Optional, Union
 
 import numpy as np
@@ -19,63 +20,81 @@ import random
 
 
 
-class DigitalSignal(object):
-  """
-  data y = |.................................................|, length = L
-           |-- window_size --|
-
+class DigitalSignal(Nomear):
+  """Digital signal(s) organized in a channel-last format
   """
 
-  def __init__(self, sequence: np.ndarray,
-               indices: Optional[np.ndarray] = None):
-    self.y = sequence
-    if indices is None: indices = np.arange(len(sequence))
-    self.x = indices
+  def __init__(self, sequence: np.ndarray, ticks=None, channel_names=None,
+               label='Blank Label', **kwargs):
+    """Parameters:
+    sequence: np.ndarray, will be reshaped to [L, C] if only one sequence with
+              1-D shape is provided
+    channel_names: if provided, len(channel_names) should be C
+    ticks: if provided, len(ticks) should be equal to len(sequence)
+    label: name of this set of digital signal
+    """
+    # Check sequence, reshape if necessary
+    assert isinstance(sequence, np.ndarray)
+    if len(sequence.shape) == 1: sequence = sequence.reshape([-1, 1])
+    assert len(sequence.shape) == 2
+    # Make sure sequence is in a channel-last format
+    if kwargs.get('length_over_channels', True):
+      assert sequence.shape[0] > sequence.shape[1]
+    # sequences.shape = [<seq_len>, <num_channels>]
+    self.sequence = sequence
 
-    # Display options
-    self.window_size = self.length
-    self.starting_index = 0
+    # Set ticks
+    if ticks is None: ticks = range(self.length)
+    ticks = np.array(ticks).ravel()
+    assert len(ticks) == self.length
+    self.ticks = ticks
+
+    # Set channel_names
+    if channel_names is None:
+      channel_names = [f'Channel-{i+1}' for i in range(self.num_channels)]
+    assert len(channel_names) == self.num_channels
+    self.channels_names = list(channel_names)
+
+    self.label = label
 
   # region: Properties
 
   @property
-  def length(self): return len(self.y)
+  def length(self): return len(self.sequence)
 
   @property
-  def xlim(self): return (self.x[self.starting_index],
-                          self.x[self.starting_index + self.window_size - 1])
+  def num_channels(self): return self.sequence.shape[1]
 
-  @property
-  def window_location_pct(self):
-    p_min = self.starting_index / self.length
-    p_max = p_min + self.window_size / self.length
-    return p_min, p_max
+  @Nomear.property()
+  def name_tick_data_list(self):
+    """Channels should not be added after this property has been called"""
+    return [(name, self.ticks, self.sequence[:, i])
+            for i, name in enumerate(self.channels_names)]
 
   # endregion: Properties
 
+  # region: Special Methods
+
+  def __getitem__(self, item):
+    if item not in self.channels_names:
+      raise KeyError(f'!! Channel `{item}` not found')
+    return self.sequence[:, self.channels_names.index(item)]
+
+  # endregion: Special Methods
+
   # region: Public Methods
 
-  def move_window(self, step_ratio, go_extreme=False):
-    # If go extreme, go home if step_ratio < 0, otherwise go end
-    if go_extreme: self.starting_index = (
-        0 if step_ratio < 0 else self.length - self.window_size)
+  def add_channel(self, sequence: np.ndarray, name=None):
+    assert not self.in_pocket('name_tick_data_list')
+    if len(sequence.shape) == 1:
+      sequence = sequence.reshape(shape=[-1, 1])
+    assert len(sequence.shape) == 2 and len(sequence) == self.length
+    # Add sequence
+    self.sequence = np.concatenate([self.sequence, sequence], axis=-1)
 
-    # Calculate step
-    step = int(step_ratio * self.window_size)
-    # Move window
-    self.starting_index = self.starting_index + step
-    # Handle left edge condition
-    self.starting_index = max(self.starting_index, 0)
-    # Handle right edge condition
-    self.starting_index = min(
-      self.starting_index, self.length - self.window_size)
-
-  def set_window_size(self, multiplier):
-    ws = int(self.window_size * multiplier)
-    ws = max(min(ws, self.length), 10)
-    self.window_size = ws
-    # Call move_window(0) to prevent window out of bound
-    self.move_window(0)
+    # Add name
+    if name is None: name = f'Channel-{self.length + 1}'
+    self.channels_names.append(name)
 
   # endregion: Public Methods
 
@@ -98,3 +117,13 @@ class DigitalSignal(object):
       x, om, phi, noise_db, max_truncate_ratio) for om in omega])
 
   # endregion: Static Methods
+
+
+
+if __name__ == '__main__':
+  ds = DigitalSignal(np.random.random(size=(50, 3)),
+                     channel_names=('A', 'B', 'C'))
+  print(ds['B'].shape)
+
+
+

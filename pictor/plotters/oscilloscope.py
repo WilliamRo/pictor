@@ -16,7 +16,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Optional, Union
 from .plotter_base import Plotter
 from ..objects.digital_signal import DigitalSignal
-from ..widgets.outline_bar import OutlineBar
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,6 +23,9 @@ import numpy as np
 
 
 class Oscilloscope(Plotter):
+  """An Oscilloscope can plot multiple signals recorded by different sensors
+  simultaneously. The object should an instance of
+  """
 
   def __init__(self, pictor=None, default_win_size=None):
     # Call parent's constructor
@@ -32,16 +34,20 @@ class Oscilloscope(Plotter):
     # Specific attributes
     self.signal_buffer = {}
     self._selected_signal: Optional[DigitalSignal] = None
-    self._outline_bar: Optional[OutlineBar] = None
 
     # Settable attributes
     self.new_settable_attr('default_win_size', default_win_size,
                            int, 'Default window size')
     self.new_settable_attr('step', 0.2, float, 'Window moving step')
+    self.new_settable_attr('bar', True, bool,
+                           'Whether to show a location bar at the bottom')
 
   # region: Plot Method
 
   def show_signal(self, x: np.ndarray, ax: plt.Axes, i: int):
+    pass
+
+  def show_signal_(self, x: np.ndarray, ax: plt.Axes, i: int):
     if x is None: return
     ds = self._get_x(x, i)
     # Make sure this signal can be accessed by other methods
@@ -52,15 +58,15 @@ class Oscilloscope(Plotter):
 
     # Show window
     ax.set_xlim(*ds.xlim)
-    if isinstance(self._outline_bar, OutlineBar):
-      self._outline_bar.locate(*ds.window_location_pct)
+    # if isinstance(self._outline_bar, OutlineBar):
+    #   self._outline_bar.locate(*ds.window_location_pct)
+
+  def _outline_bar(self):
+    pass
 
   # endregion: Plot Method
 
   # region: Public Methods
-
-  def link_to_outline_bar(self, outline_bar: OutlineBar):
-    self._outline_bar = outline_bar
 
   # endregion: Public Methods
 
@@ -87,6 +93,9 @@ class Oscilloscope(Plotter):
                              description='Double window size')
     self.register_a_shortcut('i', lambda: self.set_win_size(0.5),
                              description='Halve window size')
+
+    self.register_a_shortcut('b', lambda: self.flip('bar'),
+                             description='Toggle location bar')
 
   # endregion: Commands and Shortcuts
 

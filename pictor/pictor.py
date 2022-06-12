@@ -95,7 +95,7 @@ class Pictor(Easel):
     # Pack all widgets to self
     self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
     # Finally, pack self to root
-    self.pack()
+    self.pack(fill=tk.BOTH, expand=True)
 
   def _get_attribute(self, key, default_value):
     """This method helps commander to access to plotters"""
@@ -138,23 +138,14 @@ class Pictor(Easel):
     return p
 
   @staticmethod
-  def signal_viewer(title='Signal Viewer', figure_size=(9, 3), outline_bar=True,
-                    **kwargs):
+  def signal_viewer(title='Signal Viewer', figure_size=(9, 3), **kwargs):
     from .plotters import Oscilloscope
-    from .widgets import OutlineBar
 
     p = Pictor(title=title, figure_size=figure_size)
 
     # Add an oscilloscope
     osc = Oscilloscope(**kwargs)
     p.add_plotter(osc)
-
-    if outline_bar:
-      # Add an OutlineBar
-      bar = OutlineBar(p)
-      bar.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-      # Link oscilloscope to outline bar
-      osc.link_to_outline_bar(bar)
 
     return p
 
