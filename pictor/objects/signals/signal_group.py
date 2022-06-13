@@ -12,34 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-=========================================================================-
-from collections import OrderedDict
 from roma import Nomear
-from typing import Optional, Union, List
-from pictor.objects.digital_signal import DigitalSignal
+from typing import List
+from pictor.objects.signals.digital_signal import DigitalSignal
 
 import numpy as np
-import random
 
 
 
 class SignalGroup(Nomear):
+  """A SignalGroup maintains a list of digital signals.
   """
 
-  """
+  def __init__(self, signals, label=None):
+    # Wrap data up if necessary
+    if isinstance(signals, np.ndarray): signals = DigitalSignal(signals)
+    if isinstance(signals, DigitalSignal): signals = [signals]
 
-  def __init__(self, digital_signals: List[DigitalSignal]):
-    self.digital_signals = digital_signals
+    self.digital_signals: List[DigitalSignal] = signals
+    self.label = label
 
   # region: Properties
 
   @Nomear.property()
   def name_tick_data_list(self):
     res = []
-    for ds in self.digital_signals: res.extend(ds.name_tick_data_list)
+    for ds in self.digital_signals:
+      res.extend(ds.name_tick_data_list)
     return res
 
   @property
   def signal_labels(self): return [ds.label for ds in self.digital_signals]
+
+  @property
+  def max_length(self): return max([ds.length for ds in self.digital_signals])
 
   # endregion: Properties
 

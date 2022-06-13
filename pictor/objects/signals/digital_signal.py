@@ -52,6 +52,7 @@ class DigitalSignal(Nomear):
     # Set channel_names
     if channel_names is None:
       channel_names = [f'Channel-{i+1}' for i in range(self.num_channels)]
+    if isinstance(channel_names, str): channel_names = [channel_names]
     assert len(channel_names) == self.num_channels
     self.channels_names = list(channel_names)
 

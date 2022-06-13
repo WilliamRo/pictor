@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-==================================================================-=======
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Optional, Union
 from .plotter_base import Plotter
-from ..objects.digital_signal import DigitalSignal
+from pictor.objects.signals import SignalGroup
+from pictor.objects.signals.scrolling import Scrolling
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 
 
@@ -32,8 +33,7 @@ class Oscilloscope(Plotter):
     super(Oscilloscope, self).__init__(self.show_signal, pictor)
 
     # Specific attributes
-    self.signal_buffer = {}
-    self._selected_signal: Optional[DigitalSignal] = None
+    self.scroll_buffer = {}
 
     # Settable attributes
     self.new_settable_attr('default_win_size', default_win_size,
@@ -41,6 +41,8 @@ class Oscilloscope(Plotter):
     self.new_settable_attr('step', 0.2, float, 'Window moving step')
     self.new_settable_attr('bar', True, bool,
                            'Whether to show a location bar at the bottom')
+    self.new_settable_attr('channels', '*', str,
+                           'Channels to display, `all` by default')
 
   # region: Plot Method
 
@@ -53,25 +55,44 @@ class Oscilloscope(Plotter):
       self.show_text('No signal found', fig=fig)
       return
 
+    # Get a Scrolling object based on input x
+    s = self._get_scroll(x, i)
 
+    # Get channels [(name, x, y)]
+    channels = s.get_channels(self.get('channels'))
 
+    # Create subplots
+    height_ratios = [1 for _ in channels]
+    if self.get('bar'): height_ratios.append(sum(height_ratios) / 10)
+    axs = fig.subplots(len(height_ratios), 1,
+                       gridspec_kw={'height_ratios': height_ratios})
 
-  def show_signal_(self, x: np.ndarray, ax: plt.Axes, i: int):
-    if x is None: return
-    ds = self._get_x(x, i)
-    # Make sure this signal can be accessed by other methods
-    self._selected_signal = ds
+    # Plot signals
+    for i, (name, x, y) in enumerate(channels):
+      self._plot_signal(axs[i], name, x, y, title=s.label if i == 0 else None)
 
-    # Plot
-    ax.plot(ds.x, ds.y)
+    # Show scroll-bar if necessary
+    if self.get('bar'): self._outline_bar(axs[-1], s)
 
-    # Show window
-    ax.set_xlim(*ds.xlim)
-    # if isinstance(self._outline_bar, OutlineBar):
-    #   self._outline_bar.locate(*ds.window_location_pct)
+  def _plot_signal(self, ax: plt.Axes, name, x, y, title=None):
+    ax.plot(x, y)
+    ax.set_ylabel(name, rotation=90)
+    ax.set_xlim(min(x), max(x))
+    # Set title if provided
+    if title is not None: ax.set_title(title)
 
-  def _outline_bar(self):
-    pass
+  def _outline_bar(self, ax: plt.Axes, s: Scrolling):
+    """Reference: https://matplotlib.org/stable/tutorials/intermediate/arranging_axes.html"""
+    x_start, width = 0, s.max_length
+    # Create a rectangular patch
+    rect = patches.Rectangle((x_start, 0), width=width, height=1,
+                             edgecolor='#F66', linewidth=4,
+                             facecolor='none')
+    # Add the patch to ax
+    ax.add_patch(rect)
+    # Set axis style
+    ax.set_xlim(0, s.max_length)
+    ax.get_yaxis().set_visible(False)
 
   # endregion: Plot Method
 
@@ -110,17 +131,20 @@ class Oscilloscope(Plotter):
 
   # region: Private Methods
 
-  def _get_x(self, x: Union[np.ndarray, DigitalSignal], i: int):
-    if isinstance(x, DigitalSignal): return x
+  def _get_scroll(self, x, i: int):
+    if isinstance(x, Scrolling): return x
+    if isinstance(x, SignalGroup):
+      x.__class__ = Scrolling
+      return x
     # numpy array is not hashable, so its memory address will be used instead
     key = i
-    if key not in self.signal_buffer:
+    if key not in self.scroll_buffer:
       # Initialize a DigitalSignal if not found in buffer
-      s = DigitalSignal(x)
+      s = Scrolling(x)
       # Set window size if a default value is provided
       win_size = self.get('default_win_size')
       if win_size is not None: s.window_size = win_size
-      self.signal_buffer[key] = s
-    return self.signal_buffer[key]
+      self.scroll_buffer[key] = s
+    return self.scroll_buffer[key]
 
   # endregion: Private Methods

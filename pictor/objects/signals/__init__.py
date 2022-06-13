@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ======-=========================================================-=============
-from pictor.objects.signals import DigitalSignal
-from pictor.objects.signals import SignalGroup
+from pictor.objects.signals.digital_signal import DigitalSignal
+from pictor.objects.signals.signal_group import SignalGroup

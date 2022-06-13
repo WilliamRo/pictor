@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ===-=====================================================================-====
+# ===-=========================================================================-
+from pictor.objects.signals import DigitalSignal, SignalGroup
 from typing import Optional, Union
 
 import numpy as np
@@ -19,41 +20,60 @@ import random
 
 
 
-class DigitalSignal(object):
+class Scrolling(SignalGroup):
   """
   data y = |.................................................|, length = L
            |-- window_size --|
-
   """
 
-  def __init__(self, sequence: np.ndarray,
-               indices: Optional[np.ndarray] = None):
-    self.y = sequence
-    if indices is None: indices = np.arange(len(sequence))
-    self.x = indices
-
-    # Display options
-    self.window_size = self.length
-    self.starting_index = 0
+  class Keys:
+    window_size = 'Scrolling:window_size'
+    start_position = 'Scrolling:start_position'
 
   # region: Properties
 
   @property
-  def length(self): return len(self.y)
+  def window_size(self):
+    return self.get_from_pocket(self.Keys.window_size, default=None)
+
+  @window_size.setter
+  def window_size(self, value):
+    assert isinstance(value, int) and value > 0
+    self.put_into_pocket(self.Keys.window_size,
+                         min(value, self.max_length), exclusive=False)
 
   @property
-  def xlim(self): return (self.x[self.starting_index],
-                          self.x[self.starting_index + self.window_size - 1])
+  def start_position(self):
+    return self.get_from_pocket(self.Keys.start_position,
+                                initializer=lambda: 0.0)
 
-  @property
-  def window_location_pct(self):
-    p_min = self.starting_index / self.length
-    p_max = p_min + self.window_size / self.length
-    return p_min, p_max
+  @start_position.setter
+  def start_position(self, value):
+    assert 0 <= value <= 1.0
+    self.put_into_pocket(self.Keys.start_position, value, exclusive=False)
+
+  # @property
+  # def xlim(self): return (self.x[self.starting_index],
+  #                         self.x[self.starting_index + self.window_size - 1])
+
+  # @property
+  # def window_location_pct(self):
+  #   p_min = self.starting_index / self.length
+  #   p_max = p_min + self.window_size / self.length
+  #   return p_min, p_max
 
   # endregion: Properties
 
   # region: Public Methods
+
+  def get_channels(self, channels: str):
+    """channels can be
+       (1) *: for all channels
+       (2) names split by comma, e.g., `EEG,ECG`
+       (3) list of channels
+    """
+    return [(name, x, y) for name, x, y in self.name_tick_data_list
+            if channels == '*' or name in channels]
 
   def move_window(self, step_ratio, go_extreme=False):
     # If go extreme, go home if step_ratio < 0, otherwise go end
@@ -80,21 +100,5 @@ class DigitalSignal(object):
   # endregion: Public Methods
 
   # region: Static Methods
-
-  @staticmethod
-  def sinusoidal(x: np.ndarray, omega: Union[float, list] = 1.0,
-                 phi: float = 0.0, noise_db=None, max_truncate_ratio=0.0):
-    assert noise_db is None
-
-    if isinstance(omega, (float, int)):
-      # Truncate if permitted
-      if 0 < max_truncate_ratio < 1:
-        min_index = int((1 - max_truncate_ratio) * len(x))
-        x = x[:random.randint(min_index, len(x) + 1)]
-      # TODO: add noise
-      return np.sin(omega * x + phi)
-
-    return np.concatenate([DigitalSignal.sinusoidal(
-      x, om, phi, noise_db, max_truncate_ratio) for om in omega])
 
   # endregion: Static Methods
