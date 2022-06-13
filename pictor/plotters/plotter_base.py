@@ -18,6 +18,7 @@ from roma import Nomear
 from typing import Callable, Optional
 
 import inspect
+import matplotlib.pyplot as plt
 
 
 
@@ -80,6 +81,20 @@ class Plotter(Nomear):
 
   # endregion: Public Methods
 
+  # region: Builtin Plotters
+
+  def show_text(self, text, ax: plt.Axes = None,  fig: plt.Figure = None):
+    # Get axis
+    if ax is None:
+      if fig is None: fig = plt.gcf()
+      ax = fig.add_subplot(111)
+
+    # Show text
+    ax.set_axis_off()
+    ax.text(0.5, 0.5, text, ha='center', va='center')
+
+  # endregion: Builtin Plotters
+
   # region: Commands
 
   def set(self, key, value=None):
@@ -135,6 +150,9 @@ class Plotter(Nomear):
         kwargs[k] = self.pictor.canvas.axes2D
       elif k in ('ax3d', 'axes3d'):
         kwargs[k] = self.pictor.canvas.axes3D
+      elif k in ('title', 'label'):
+        obj_cursor = self.pictor.cursors[self.pictor.Keys.OBJECTS]
+        kwargs[k] = self.pictor.labels[obj_cursor]
       elif hasattr(self, k):
         kwargs[k] = getattr(self, k)
 

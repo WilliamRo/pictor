@@ -38,6 +38,7 @@ class Retina(Plotter):
     self.new_settable_attr('vmax', None, float, 'Max value')
     self.new_settable_attr('cmap', None, float, 'Color map')
     self.new_settable_attr('interpolation', None, str, 'Interpolation method')
+    self.new_settable_attr('title', False, bool, 'Whether to show title')
 
 
   @staticmethod
@@ -46,13 +47,13 @@ class Retina(Plotter):
     return x
 
 
-  def imshow(self, ax: plt.Axes, x: np.ndarray, fig: plt.Figure):
+  def imshow(self, ax: plt.Axes, x: np.ndarray, fig: plt.Figure, label: str):
     # Clear axes before drawing, and hide axes
     ax.set_axis_off()
 
     # If x is not provided
     if x is None:
-      ax.text(0.5, 0.5, 'No image found', ha='center', va='center')
+      self.show_text('No image found', ax)
       return
     x = self._check_image(x)
 
@@ -76,10 +77,13 @@ class Retina(Plotter):
       cax = divider.append_axes('right', size='5%', pad=0.05)
       fig.colorbar(im, cax=cax)
 
-    # TODO: show title if provided
+    # show title if provided
+    if label is not None and self.get('title'): ax.set_title(label)
 
 
   def register_shortcuts(self):
+    self.register_a_shortcut(
+      'T', lambda: self.flip('title'), 'Turn on/off title')
     self.register_a_shortcut(
       'C', lambda: self.flip('color_bar'), 'Turn on/off color bar')
     self.register_a_shortcut(

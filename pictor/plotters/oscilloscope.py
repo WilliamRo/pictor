@@ -44,8 +44,17 @@ class Oscilloscope(Plotter):
 
   # region: Plot Method
 
-  def show_signal(self, x: np.ndarray, ax: plt.Axes, i: int):
-    pass
+  def show_signal(self, x: np.ndarray, fig: plt.Figure, i: int):
+    # Clear figure
+    fig.clear()
+
+    # If x is not provided
+    if x is None:
+      self.show_text('No signal found', fig=fig)
+      return
+
+
+
 
   def show_signal_(self, x: np.ndarray, ax: plt.Axes, i: int):
     if x is None: return

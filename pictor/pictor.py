@@ -27,6 +27,7 @@ class Pictor(Easel):
   class Keys:
     OBJECTS = 'ObJeCtS'
     PLOTTERS = 'PlOtTeRs'
+    LABELS = 'LaBeLs'
 
   def __init__(self, title='Pictor', figure_size=(5, 5)):
     # Call parent's constructor
@@ -56,6 +57,15 @@ class Pictor(Easel):
   @objects.setter
   def objects(self, value):
     self.set_to_axis(self.Keys.OBJECTS, value, overwrite=True)
+
+  @property
+  def labels(self):
+    return self.get_from_pocket(self.Keys.LABELS, default=None)
+
+  @labels.setter
+  def labels(self, values):
+    assert len(values) == len(self.objects)
+    self.put_into_pocket(self.Keys.LABELS, values)
 
   @property
   def active_plotter(self) -> Plotter:
