@@ -34,7 +34,12 @@ class Scrolling(SignalGroup):
 
   @property
   def window_size(self):
-    return self.get_from_pocket(self.Keys.window_size, default=None)
+    return self.get_from_pocket(self.Keys.window_size,
+                                initializer=lambda: self.max_length)
+
+  @property
+  def window_size_pct(self):
+    return self.window_size / self.max_length
 
   @window_size.setter
   def window_size(self, value):
@@ -49,18 +54,9 @@ class Scrolling(SignalGroup):
 
   @start_position.setter
   def start_position(self, value):
-    assert 0 <= value <= 1.0
+    # Handle edge condition
+    value = min(max(value, 0), 1.0 - self.window_size_pct)
     self.put_into_pocket(self.Keys.start_position, value, exclusive=False)
-
-  # @property
-  # def xlim(self): return (self.x[self.starting_index],
-  #                         self.x[self.starting_index + self.window_size - 1])
-
-  # @property
-  # def window_location_pct(self):
-  #   p_min = self.starting_index / self.length
-  #   p_max = p_min + self.window_size / self.length
-  #   return p_min, p_max
 
   # endregion: Properties
 
@@ -72,27 +68,28 @@ class Scrolling(SignalGroup):
        (2) names split by comma, e.g., `EEG,ECG`
        (3) list of channels
     """
-    return [(name, x, y) for name, x, y in self.name_tick_data_list
-            if channels == '*' or name in channels]
+    res = []
+    for name, x, y in self.name_tick_data_list:
+      if not (channels == '*' or name in channels): continue
+      assert len(x) == len(y)
+      start_i = int(len(x) * self.start_position)
+      end_i = start_i + self.window_size
+      res.append((name, x[start_i:end_i], y[start_i:end_i]))
+    return res
 
   def move_window(self, step_ratio, go_extreme=False):
     # If go extreme, go home if step_ratio < 0, otherwise go end
-    if go_extreme: self.starting_index = (
-        0 if step_ratio < 0 else self.length - self.window_size)
+    if go_extreme: self.start_position = (
+      0.0 if step_ratio < 0 else 1.0 - self.window_size_pct)
 
     # Calculate step
-    step = int(step_ratio * self.window_size)
+    step = step_ratio * self.window_size_pct
     # Move window
-    self.starting_index = self.starting_index + step
-    # Handle left edge condition
-    self.starting_index = max(self.starting_index, 0)
-    # Handle right edge condition
-    self.starting_index = min(
-      self.starting_index, self.length - self.window_size)
+    self.start_position = self.start_position + step
 
   def set_window_size(self, multiplier):
     ws = int(self.window_size * multiplier)
-    ws = max(min(ws, self.length), 10)
+    ws = max(min(ws, self.max_length), 10)
     self.window_size = ws
     # Call move_window(0) to prevent window out of bound
     self.move_window(0)

@@ -45,7 +45,12 @@ class SignalGroup(Nomear):
   def signal_labels(self): return [ds.label for ds in self.digital_signals]
 
   @property
-  def max_length(self): return max([ds.length for ds in self.digital_signals])
+  def dominate_signal(self) -> DigitalSignal:
+    return list(sorted(self.digital_signals, key=lambda ds: ds.length))[-1]
+
+  @property
+  def max_length(self): return self.dominate_signal.length
+  # def max_length(self): return max([ds.length for ds in self.digital_signals])
 
   # endregion: Properties
 

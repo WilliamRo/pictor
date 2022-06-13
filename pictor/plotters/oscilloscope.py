@@ -34,6 +34,7 @@ class Oscilloscope(Plotter):
 
     # Specific attributes
     self.scroll_buffer = {}
+    self._selected_signal: Optional[Scrolling] = None
 
     # Settable attributes
     self.new_settable_attr('default_win_size', default_win_size,
@@ -57,6 +58,7 @@ class Oscilloscope(Plotter):
 
     # Get a Scrolling object based on input x
     s = self._get_scroll(x, i)
+    self._selected_signal = s
 
     # Get channels [(name, x, y)]
     channels = s.get_channels(self.get('channels'))
@@ -69,29 +71,33 @@ class Oscilloscope(Plotter):
 
     # Plot signals
     for i, (name, x, y) in enumerate(channels):
-      self._plot_signal(axs[i], name, x, y, title=s.label if i == 0 else None)
+      self._plot_signal(axs[i], name, x, y, x_ticks=i==len(channels)-1,
+                        title=s.label if i == 0 else None)
 
     # Show scroll-bar if necessary
     if self.get('bar'): self._outline_bar(axs[-1], s)
 
-  def _plot_signal(self, ax: plt.Axes, name, x, y, title=None):
+  def _plot_signal(self, ax: plt.Axes, name, x, y, x_ticks=True, title=None):
     ax.plot(x, y)
     ax.set_ylabel(name, rotation=90)
     ax.set_xlim(min(x), max(x))
+    ax.get_xaxis().set_visible(x_ticks)
     # Set title if provided
     if title is not None: ax.set_title(title)
 
   def _outline_bar(self, ax: plt.Axes, s: Scrolling):
     """Reference: https://matplotlib.org/stable/tutorials/intermediate/arranging_axes.html"""
-    x_start, width = 0, s.max_length
+    ticks = s.dominate_signal.ticks
+    start_i = int(len(ticks) * s.start_position)
+
     # Create a rectangular patch
-    rect = patches.Rectangle((x_start, 0), width=width, height=1,
-                             edgecolor='#F66', linewidth=4,
-                             facecolor='none')
+    rect = patches.Rectangle(
+      (ticks[start_i], 0), width=s.window_size-1, height=1, edgecolor='#F66',
+      linewidth=4, facecolor='none')
     # Add the patch to ax
     ax.add_patch(rect)
     # Set axis style
-    ax.set_xlim(0, s.max_length)
+    ax.set_xlim(ticks[0], ticks[-1])
     ax.get_yaxis().set_visible(False)
 
   # endregion: Plot Method
