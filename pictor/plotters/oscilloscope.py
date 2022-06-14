@@ -28,7 +28,7 @@ class Oscilloscope(Plotter):
   simultaneously. The object should an instance of
   """
 
-  def __init__(self, pictor=None, default_win_size=None):
+  def __init__(self, pictor=None, default_win_size=None, y_ticks=True):
     # Call parent's constructor
     super(Oscilloscope, self).__init__(self.show_signal, pictor)
 
@@ -44,6 +44,7 @@ class Oscilloscope(Plotter):
                            'Whether to show a location bar at the bottom')
     self.new_settable_attr('channels', '*', str,
                            'Channels to display, `all` by default')
+    self.new_settable_attr('y_ticks', y_ticks, bool, 'Whether to show y-ticks')
 
   # region: Plot Method
 
@@ -82,6 +83,8 @@ class Oscilloscope(Plotter):
     ax.set_ylabel(name, rotation=90)
     ax.set_xlim(min(x), max(x))
     ax.get_xaxis().set_visible(x_ticks)
+    # Set styles
+    if not self.get('y_ticks'): ax.set_yticklabels([])
     # Set title if provided
     if title is not None: ax.set_title(title)
 
@@ -132,6 +135,8 @@ class Oscilloscope(Plotter):
 
     self.register_a_shortcut('b', lambda: self.flip('bar'),
                              description='Toggle location bar')
+    self.register_a_shortcut('y', lambda: self.flip('y_ticks'),
+                             description='Whether to show y-ticks')
 
   # endregion: Commands and Shortcuts
 
