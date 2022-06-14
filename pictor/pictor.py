@@ -138,6 +138,18 @@ class Pictor(Easel):
 
   # endregion: Public Methods
 
+  # region: Commands
+
+  def set_object_cursor(self, i: int):
+    self.set_cursor(self.Keys.OBJECTS, cursor=i - 1, refresh=True)
+  def set_plotter_cursor(self, i: int):
+    self.set_cursor(self.Keys.PLOTTERS, cursor=i - 1, refresh=True)
+
+  so = set_object_cursor
+  sp = set_plotter_cursor
+
+  # endregion: Commands
+
   # region: Presets
 
   @staticmethod
