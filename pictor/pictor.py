@@ -14,6 +14,7 @@
 # ====-==================================================================-======
 from .plotters import Plotter
 from .widgets import Canvas
+from .plugins.database import Database
 from .plugins.studio import Studio
 
 from roma import Easel
@@ -23,7 +24,7 @@ import tkinter as tk
 
 
 
-class Pictor(Easel, Studio):
+class Pictor(Easel, Database, Studio):
 
   class Keys:
     OBJECTS = 'ObJeCtS'
