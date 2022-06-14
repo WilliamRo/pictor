@@ -14,6 +14,7 @@
 # ====-==================================================================-======
 from .plotters import Plotter
 from .widgets import Canvas
+from .plugins.studio import Studio
 
 from roma import Easel
 from typing import Callable
@@ -22,7 +23,7 @@ import tkinter as tk
 
 
 
-class Pictor(Easel):
+class Pictor(Easel, Studio):
 
   class Keys:
     OBJECTS = 'ObJeCtS'
