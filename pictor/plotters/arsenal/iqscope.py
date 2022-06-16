@@ -49,8 +49,11 @@ class IQScope(Oscilloscope):
     axs = fig.subplots(len(height_ratios), 1,
                        gridspec_kw={'height_ratios': height_ratios})
 
-    # Plot signals
+    # Plot signals in time domain
     self._plot_channels_in_one_plot(axs[0], channels, title=s.label)
+
+    # Plot signals in frequency domain
+    self._plot_frequency(axs[1], channels)
 
     # Show scroll-bar if necessary
     if self.get('bar'): self._outline_bar(axs[-1], s)
@@ -69,4 +72,18 @@ class IQScope(Oscilloscope):
 
 
   def _plot_frequency(self, ax: plt.Axes, channels: list):
+    # Sanity check
+    assert len(channels) == 2
+
+    # Create complex signal from I/Q components
+    I, Q = [y for _, _, y in channels]
+    S =  I + 1j*Q
+
+    # Do Fourier transformation and plot
+    F = np.fft.fftshift(np.fft.fft(S))
+    ax.plot(20 * np.log10(np.abs(F) / 1.0))
+
+    # Set styles
+    ax.get_xaxis().set_visible(False)
     ax.set_ylabel('Frequency Domain')
+    if not self.get('y_ticks'): ax.set_yticklabels([])
