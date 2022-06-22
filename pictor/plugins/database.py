@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-=====================================================================-====
+"""This class provides filter functions for subclasses of Pictor"""
 from roma import Nomear
 
 import inspect
