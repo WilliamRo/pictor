@@ -74,7 +74,7 @@ class Studio(object):
 
     # Create animation
     tgt = 'objects' if axis == 'o' else 'plotters'
-    frames = list(range(begin, end))
+    frames = list(range(begin, end + 1))
 
     # TODO: directly export mp4 file will lose last few frames. Use this code
     #       block to circumvent this issue temporarily
