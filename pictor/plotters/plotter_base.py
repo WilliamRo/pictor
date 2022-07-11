@@ -109,6 +109,9 @@ class Plotter(Nomear):
     _type = self.settable_attributes[key][1]
     # Convert value accordingly
     if value in (None, 'none', 'None'): value = None
+    elif isinstance(value, str) and value.lower() in (
+        'true', 'false', '0', '1'):
+      value = 'true' if value.lower() in ('true', '1') else False
     else: value = _type(value)
     self.settable_attributes[key][0] = value
 
