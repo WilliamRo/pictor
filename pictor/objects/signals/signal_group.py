@@ -24,13 +24,14 @@ class SignalGroup(Nomear):
   """A SignalGroup maintains a list of digital signals.
   """
 
-  def __init__(self, signals, label=None):
+  def __init__(self, signals, label=None, **properties):
     # Wrap data up if necessary
     if isinstance(signals, np.ndarray): signals = DigitalSignal(signals)
     if isinstance(signals, DigitalSignal): signals = [signals]
 
     self.digital_signals: List[DigitalSignal] = signals
     self.label = label
+    self.properties = properties
 
   # region: Properties
 
