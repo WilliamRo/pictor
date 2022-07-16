@@ -51,7 +51,11 @@ class SignalGroup(Nomear):
 
   @property
   def max_length(self): return self.dominate_signal.length
-  # def max_length(self): return max([ds.length for ds in self.digital_signals])
+
+  @property
+  def total_duration(self):
+    ticks = self.dominate_signal.ticks
+    return ticks[-1] - ticks[0]
 
   # endregion: Properties
 
