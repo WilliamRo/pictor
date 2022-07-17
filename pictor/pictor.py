@@ -51,6 +51,9 @@ class Pictor(Easel, Database, Studio):
     # Set layout
     self._set_default_layout()
 
+    # TODO: beta
+    self.on_command_text_changed = self.default_on_command_text_changed
+
   # region: Properties
 
   @property
@@ -131,6 +134,7 @@ class Pictor(Easel, Database, Studio):
     # Set master
     plotter.register_to_master(self)
     self.add_to_axis(self.Keys.PLOTTERS, plotter, index=index)
+    return plotter
 
   def refresh(self):
     # Refresh title

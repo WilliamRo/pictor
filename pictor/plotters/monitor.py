@@ -49,6 +49,21 @@ class Monitor(Plotter):
                            'Channels to display, `all` by default')
     self.new_settable_attr('y_ticks', y_ticks, bool, 'Whether to show y-ticks')
 
+  # region: Properties
+
+  @property
+  def channel_list(self):
+    return self.get_from_pocket(
+      'channel_list', default=[
+        c for c, _, _ in self._selected_signal.name_tick_data_list])
+
+  @channel_list.setter
+  def channel_list(self, value):
+    assert isinstance(value, (list, tuple))
+    self.put_into_pocket('channel_list', value)
+
+  # endregion: Properties
+
   # region: Plot Method
   
   def register_to_master(self, pictor):
@@ -56,35 +71,13 @@ class Monitor(Plotter):
     #   f'({e.xdata}, {e.ydata})'))
     super(Monitor, self).register_to_master(pictor)
 
-  def show_signal(self, x: np.ndarray, fig: plt.Figure, i: int):
-    # Clear figure
-    fig.clear()
-
-    # If x is not provided
-    if x is None:
-      self.show_text('No signal found', fig=fig)
-      return
-
-    # Get a Scrolling object based on input x
-    s = self._get_scroll(x, i)
-    self._selected_signal = s
-
-    # Get channels [(name, x, y)]
-    channels = s.get_channels(self.get('channels'))
-
-    # Create subplots
-    height_ratios = [1 for _ in channels]
-    if self.get('bar'): height_ratios.append(sum(height_ratios) / 10)
-    axs = fig.subplots(len(height_ratios), 1,
-                       gridspec_kw={'height_ratios': height_ratios})
-
-    # Plot signals
-    for i, (name, x, y) in enumerate(channels):
-      self._plot_signal(axs[i], name, x, y, x_ticks=i==len(channels)-1,
-                        title=s.label if i == 0 else None)
-
-    # Show scroll-bar if necessary
-    if self.get('bar'): self._outline_bar(axs[-1], s)
+    # Set channel hints
+    def get_hints():
+      hints = ['Channel list', '-' * 12]
+      hints += [f'[{i+1}] {name}' for i, name in enumerate(self.channel_list)]
+      return '\n'.join(hints)
+    self.pictor.command_hints['sc'] = get_hints
+    self.pictor.command_hints['set_channels'] = get_hints
 
   def show_curves(self, x: np.ndarray, fig: plt.Figure, i: int):
     # Clear figure
@@ -102,10 +95,11 @@ class Monitor(Plotter):
     # Create subplots
     height_ratios = [50]
     if self.get('bar'): height_ratios.append(1)
-    axs = fig.subplots(2, 1, gridspec_kw={'height_ratios': height_ratios})
+    axs = fig.subplots(
+      len(height_ratios), 1, gridspec_kw={'height_ratios': height_ratios})
 
     # Plot signals
-    ax: plt.Axes = axs[0]
+    ax: plt.Axes = axs[0] if len(height_ratios) > 1 else axs
     self._plot_curve(ax, s)
 
     # Show scroll-bar if necessary
@@ -123,10 +117,11 @@ class Monitor(Plotter):
     channels = s.get_channels(self.get('channels'))
     N = len(channels)
 
+    margin = 0.1
     for i, (name, x, y) in enumerate(channels):
       # Plot normalized y
       y -= min(y)
-      y /= max(y)
+      y = y / max(y) * (1.0 - 2 * margin) + margin
       y += N - 1 - i
       ax.plot(x, y, color='black', linewidth=1)
 
@@ -142,16 +137,6 @@ class Monitor(Plotter):
     ax.grid(color='#E03', alpha=0.4)
 
     ax.set_title(s.label)
-
-  def _plot_signal(self, ax: plt.Axes, name, x, y, x_ticks=True, title=None):
-    ax.plot(x, y)
-    ax.set_ylabel(name, rotation=90)
-    ax.set_xlim(min(x), max(x))
-    ax.get_xaxis().set_visible(x_ticks)
-    # Set styles
-    if not self.get('y_ticks'): ax.set_yticklabels([])
-    # Set title if provided
-    if title is not None: ax.set_title(title)
 
   def _outline_bar(self, ax: plt.Axes, s: Scrolling):
     """Reference: https://matplotlib.org/stable/tutorials/intermediate/arranging_axes.html"""
@@ -186,19 +171,26 @@ class Monitor(Plotter):
     self._selected_signal.move_window(direction * self.get('step'), go_extreme)
     self.refresh()
 
-  def goto_position(self, position):
+  def goto_position(self, position: int):
     self._selected_signal.start_position = position
     self.refresh()
 
-  def set_win_size(self, multiplier):
+  def set_win_size(self, multiplier: int):
     self._selected_signal.set_window_size(multiplier)
     self.refresh()
 
-  def set_win_duration(self, duration):
+  def set_win_duration(self, duration: float):
     assert duration > 0
     self._selected_signal.set_window_duration(duration)
     self.refresh()
   sd = set_win_duration
+
+  def set_channels(self, channels: str):
+    all_channels = self.channel_list
+    if channels == '*': channels = all_channels
+    else: channels = [all_channels[int(id) - 1] for id in channels.split(',')]
+    self.set('channels', ','.join(channels))
+  sc = set_channels
 
   def register_shortcuts(self):
     self.register_a_shortcut('h', lambda: self.move_window(-1),

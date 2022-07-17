@@ -71,6 +71,11 @@ class Plotter(Nomear):
   def register_to_master(self, pictor):
     """Register self to pictor"""
     self.pictor = pictor
+    # Set self.set.__doc__
+    lines = ['Settable attributes:', '-' * 20] + [
+      f'{k}({v[0]}, {v[1].__name__}): {v[2]}'
+      for k, v in self.settable_attributes.items()]
+    self.pictor.command_hints['set'] = '\n'.join(lines)
 
   def register_a_shortcut(self, key: str, func: Callable, description,
                           color='yellow'):

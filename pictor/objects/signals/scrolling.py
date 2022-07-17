@@ -39,7 +39,7 @@ class Scrolling(SignalGroup):
 
   @window_size.setter
   def window_size(self, value):
-    assert isinstance(value, float) and 0.0 <= value <= 1.0
+    assert isinstance(value, float) and value > 0
     self.put_into_pocket(
       self.Keys.window_size, min(value, 1.0), exclusive=False)
 
@@ -66,8 +66,11 @@ class Scrolling(SignalGroup):
        (3) list of channels
     """
     res = []
-    for name, x, y in self.name_tick_data_list:
-      if not (channels == '*' or name in channels): continue
+    if channels == '*': name_tick_data_list = self.name_tick_data_list
+    else: name_tick_data_list = [
+      (name, *self.name_tick_data_dict[name]) for name in channels.split(',')]
+
+    for name, x, y in name_tick_data_list:
       assert len(x) == len(y)
       start_i = int(len(x) * self.start_position)  # (1)
       end_i = start_i + int(self.window_size * len(x))
@@ -95,7 +98,3 @@ class Scrolling(SignalGroup):
     self.window_size = window_duration / self.total_duration
 
   # endregion: Public Methods
-
-  # region: Static Methods
-
-  # endregion: Static Methods

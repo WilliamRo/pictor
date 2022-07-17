@@ -42,6 +42,13 @@ class SignalGroup(Nomear):
       res.extend(ds.name_tick_data_list)
     return res
 
+  @Nomear.property()
+  def name_tick_data_dict(self):
+    res = {}
+    for ds in self.digital_signals:
+      for name, tick, data in ds.name_tick_data_list: res[name] = (tick, data)
+    return res
+
   @property
   def signal_labels(self): return [ds.label for ds in self.digital_signals]
 
