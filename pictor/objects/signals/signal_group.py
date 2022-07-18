@@ -49,6 +49,13 @@ class SignalGroup(Nomear):
       for name, tick, data in ds.name_tick_data_list: res[name] = (tick, data)
     return res
 
+  @Nomear.property()
+  def channel_signal_dict(self):
+    res = {}
+    for ds in self.digital_signals:
+      for name in ds.channels_names: res[name] = ds
+    return res
+
   @property
   def signal_labels(self): return [ds.label for ds in self.digital_signals]
 
@@ -76,6 +83,10 @@ class SignalGroup(Nomear):
     return self.digital_signals[self.signal_labels.index(item)]
 
   # endregion: Special Methods
+
+  def get_channel_percentile(self, name, percentile):
+    ds = self.channel_signal_dict[name]
+    return ds.get_channel_percentile(name, percentile)
 
   # endregion: Public Methods
 

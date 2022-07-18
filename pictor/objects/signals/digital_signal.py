@@ -97,6 +97,14 @@ class DigitalSignal(Nomear):
     if name is None: name = f'Channel-{self.length + 1}'
     self.channels_names.append(name)
 
+  def get_channel_percentile(self, name, percentile):
+    assert 0 <= percentile <= 100
+    key = (name, percentile)
+    if not self.in_pocket(key):
+      self.put_into_pocket(key, np.percentile(self[name], percentile),
+                           local=True)
+    return self.get_from_pocket(key)
+
   # endregion: Public Methods
 
   # region: Static Methods

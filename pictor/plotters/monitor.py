@@ -47,7 +47,11 @@ class Monitor(Plotter):
                            'Whether to show a location bar at the bottom')
     self.new_settable_attr('channels', channels, str,
                            'Channels to display, `all` by default')
-    self.new_settable_attr('y_ticks', y_ticks, bool, 'Whether to show y-ticks')
+    self.new_settable_attr('max_ticks', 10000, int, 'Maximum ticks to plot')
+    self.new_settable_attr('smart_scale', True, bool,
+                           'Whether to use smart scale ')
+    self.new_settable_attr('xi', 0.1, float, 'Margin for smart scale')
+    self.new_settable_attr('hl', 0, int, 'Highlighted channel id')
 
   # region: Properties
 
@@ -61,6 +65,11 @@ class Monitor(Plotter):
   def channel_list(self, value):
     assert isinstance(value, (list, tuple))
     self.put_into_pocket('channel_list', value)
+
+  @property
+  def highlighed_channel(self):
+    id = int(self.get('hl'))
+    return id
 
   # endregion: Properties
 
@@ -113,17 +122,33 @@ class Monitor(Plotter):
         1     -> N(=2) - i(=1) - 0.5 = 0.5
            0  ---------
     """
+    # Get settings
+    smart_scale = self.get('smart_scale')
+    hl_id = self.get('hl')
+
     # Get channels [(name, x, y)]
-    channels = s.get_channels(self.get('channels'))
+    channels = s.get_channels(self.get('channels'),
+                              max_ticks=self.get('max_ticks'))
     N = len(channels)
 
-    margin = 0.1
+    margin = 0.05
     for i, (name, x, y) in enumerate(channels):
+      # Normalized y before plot
+      if not smart_scale:
+        y = y - min(y)
+        y = y / max(y) * (1.0 - 2 * margin) + margin
+      else:
+        xi = self.get('xi')
+        mi = s.get_channel_percentile(name, xi)
+        ma = s.get_channel_percentile(name, 100 - xi)
+        y = y - mi
+        y = y / (ma - mi) * (1.0 - 2 * margin) + margin
+
+      y = y + N - 1 - i
       # Plot normalized y
-      y -= min(y)
-      y = y / max(y) * (1.0 - 2 * margin) + margin
-      y += N - 1 - i
-      ax.plot(x, y, color='black', linewidth=1)
+      color, zorder = 'black', 10
+      if hl_id > 0 and i + 1 != hl_id: color, zorder = '#AAA', None
+      ax.plot(x, y, color=color, linewidth=1, zorder=zorder)
 
       # Set xlim
       if i == 0: ax.set_xlim(x[0], x[-1])
@@ -131,10 +156,14 @@ class Monitor(Plotter):
     # Set y_ticks
     ax.set_yticks([N - i - 0.5 for i in range(N)])
     ax.set_yticklabels([name for name, _, _ in channels])
+    if hl_id > 0:
+      for i, label in enumerate(ax.get_yticklabels()):
+        label.set_color('black' if i + 1 == hl_id else 'grey')
 
     # Set styles
     ax.set_ylim(0, N)
     ax.grid(color='#E03', alpha=0.4)
+    ax.spines['left'].set_color('#33b' if smart_scale else '#000')
 
     ax.set_title(s.label)
 
@@ -192,6 +221,19 @@ class Monitor(Plotter):
     self.set('channels', ','.join(channels))
   sc = set_channels
 
+  def highlight(self, id: int = 0):
+    # Sanity check
+    assert isinstance(id, int)
+
+    # Get number of all displayed channels
+    channel_str = self.get('channels')
+    if channel_str == '*': N = len(self.channel_list)
+    else: N = len(channel_str.split(','))
+
+    # Set id
+    self.set('hl', id % (N + 1))
+  hl = highlight
+
   def register_shortcuts(self):
     self.register_a_shortcut('h', lambda: self.move_window(-1),
                              description='Slide window to left')
@@ -212,6 +254,21 @@ class Monitor(Plotter):
                              description='Toggle location bar')
     self.register_a_shortcut('y', lambda: self.flip('y_ticks'),
                              description='Whether to show y-ticks')
+    self.register_a_shortcut('s', lambda: self.flip('smart_scale'),
+                             description='Toggle smart scale')
+    self.register_a_shortcut(
+      'bracketleft', lambda: self.set('xi', 0.5 * self.get('xi')),
+      description='Halve xi')
+    self.register_a_shortcut(
+      'bracketright', lambda: self.set('xi', 2 * self.get('xi')),
+      description='Doulbe xi')
+
+    self.register_a_shortcut(
+      'J', lambda: self.highlight(self.get('hl') + 1),
+      description='Highlight next channel')
+    self.register_a_shortcut(
+      'K', lambda: self.highlight(self.get('hl') - 1),
+      description='Highlight previous channel')
 
   # endregion: Commands and Shortcuts
 

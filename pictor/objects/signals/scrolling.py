@@ -59,7 +59,7 @@ class Scrolling(SignalGroup):
 
   # region: Public Methods
 
-  def get_channels(self, channels: str):
+  def get_channels(self, channels: str, max_ticks=None):
     """channels can be
        (1) *: for all channels
        (2) names split by comma, e.g., `EEG,ECG`
@@ -68,13 +68,19 @@ class Scrolling(SignalGroup):
     res = []
     if channels == '*': name_tick_data_list = self.name_tick_data_list
     else: name_tick_data_list = [
-      (name, *self.name_tick_data_dict[name]) for name in channels.split(',')]
+      (name, *self.name_tick_data_dict[name])
+      for name in channels.split(',') if name in self.name_tick_data_dict]
 
     for name, x, y in name_tick_data_list:
       assert len(x) == len(y)
       start_i = int(len(x) * self.start_position)  # (1)
       end_i = start_i + int(self.window_size * len(x))
-      res.append((name, x[start_i:end_i], y[start_i:end_i]))
+
+      # Apply max_ticks option if given
+      if isinstance(max_ticks, int) and 0 < max_ticks < end_i - start_i:
+        step = (end_i - start_i) // max_ticks
+      else: step = 1
+      res.append((name, x[start_i:end_i:step], y[start_i:end_i:step]))
     return res
 
   def move_window(self, step_ratio, go_extreme=False):
