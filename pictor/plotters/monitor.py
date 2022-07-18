@@ -27,8 +27,7 @@ class Monitor(Plotter):
   """A Monitor can plot multiple records simultaneously. The object should an instance of
   """
 
-  def __init__(self, pictor=None, window_duration=60,
-               channels: str='*', y_ticks=True):
+  def __init__(self, pictor=None, window_duration=60, channels: str='*'):
     """
     :param window_duration: uses second as unit
     """
