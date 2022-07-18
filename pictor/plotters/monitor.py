@@ -51,6 +51,8 @@ class Monitor(Plotter):
                            'Whether to use smart scale ')
     self.new_settable_attr('xi', 0.1, float, 'Margin for smart scale')
     self.new_settable_attr('hl', 0, int, 'Highlighted channel id')
+    self.new_settable_attr('annotation', False, bool,
+                           'Whether to show annotations')
 
   # region: Properties
 
@@ -70,6 +72,15 @@ class Monitor(Plotter):
     id = int(self.get('hl'))
     return id
 
+  @property
+  def displayed_channels(self):
+    channel_attr: str = self.get('channels')
+    return self.channel_list if channel_attr == '*' else channel_attr.split(',')
+
+  @property
+  def hidden_channels(self):
+    return [c for c in self.channel_list if c not in self.displayed_channels]
+
   # endregion: Properties
 
   # region: Plot Method
@@ -80,12 +91,15 @@ class Monitor(Plotter):
     super(Monitor, self).register_to_master(pictor)
 
     # Set channel hints
-    def get_hints():
+    def get_hints(for_add_channels=False):
       hints = ['Channel list', '-' * 12]
-      hints += [f'[{i+1}] {name}' for i, name in enumerate(self.channel_list)]
+      channels = self.hidden_channels if for_add_channels else self.channel_list
+      hints += [f'[{i+1}] {name}' for i, name in enumerate(channels)]
       return '\n'.join(hints)
     self.pictor.command_hints['sc'] = get_hints
     self.pictor.command_hints['set_channels'] = get_hints
+    self.pictor.command_hints['ac'] = lambda: get_hints(True)
+    self.pictor.command_hints['add_channels'] = lambda: get_hints(True)
 
   def show_curves(self, x: np.ndarray, fig: plt.Figure, i: int):
     # Clear figure
@@ -109,6 +123,9 @@ class Monitor(Plotter):
     # Plot signals
     ax: plt.Axes = axs[0] if len(height_ratios) > 1 else axs
     self._plot_curve(ax, s)
+
+    # Plot annotations
+    if self.get('annotation'): self._plot_annotation(ax, s)
 
     # Show scroll-bar if necessary
     if self.get('bar'): self._outline_bar(axs[-1], s)
@@ -146,7 +163,7 @@ class Monitor(Plotter):
       y = y + N - 1 - i
       # Plot normalized y
       color, zorder = 'black', 10
-      if hl_id > 0 and i + 1 != hl_id: color, zorder = '#AAA', None
+      if 0 < hl_id != i + 1: color, zorder = '#AAA', None
       ax.plot(x, y, color=color, linewidth=1, zorder=zorder)
 
       # Set xlim
@@ -155,6 +172,8 @@ class Monitor(Plotter):
     # Set y_ticks
     ax.set_yticks([N - i - 0.5 for i in range(N)])
     ax.set_yticklabels([name for name, _, _ in channels])
+
+    # Highlight label if necessary
     if hl_id > 0:
       for i, label in enumerate(ax.get_yticklabels()):
         label.set_color('black' if i + 1 == hl_id else 'grey')
@@ -162,9 +181,15 @@ class Monitor(Plotter):
     # Set styles
     ax.set_ylim(0, N)
     ax.grid(color='#E03', alpha=0.4)
-    ax.spines['left'].set_color('#3366aa' if smart_scale else '#000')
 
-    ax.set_title(s.label)
+    tail = f' (xi={self.get("xi")})' if smart_scale else ''
+    ax.set_title(s.label + tail)
+
+  def _plot_annotation(self, ax: plt.Axes, s: Scrolling):
+    ax: plt.Axes = ax.twinx()
+    x_min, x_max = ax.get_xlim()
+    ax.plot([x_min, x_max], [0, 1], color='#4281f5', zorder=-99,
+            alpha=0.3, linewidth=8)
 
   def _outline_bar(self, ax: plt.Axes, s: Scrolling):
     """Reference: https://matplotlib.org/stable/tutorials/intermediate/arranging_axes.html"""
@@ -219,6 +244,12 @@ class Monitor(Plotter):
     else: channels = [all_channels[int(id) - 1] for id in channels.split(',')]
     self.set('channels', ','.join(channels))
   sc = set_channels
+
+  def add_channels(self, channels: str):
+    channels = self.displayed_channels + [
+      self.hidden_channels[int(i) - 1] for i in channels.split(',')]
+    self.set('channels', ','.join(channels))
+  ac = add_channels
 
   def highlight(self, id: int = 0):
     # Sanity check
@@ -281,6 +312,8 @@ class Monitor(Plotter):
 
     self.register_a_shortcut('x', self.remove_highlighted_channel,
                              'Remove highlighted channel')
+    self.register_a_shortcut('a', lambda: self.flip('annotation'),
+                             'Toggle annotation')
 
   # endregion: Commands and Shortcuts
 
