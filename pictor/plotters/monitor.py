@@ -163,7 +163,7 @@ class Monitor(Plotter):
     # Set styles
     ax.set_ylim(0, N)
     ax.grid(color='#E03', alpha=0.4)
-    ax.spines['left'].set_color('#33b' if smart_scale else '#000')
+    ax.spines['left'].set_color('#3366aa' if smart_scale else '#000')
 
     ax.set_title(s.label)
 
@@ -234,6 +234,19 @@ class Monitor(Plotter):
     self.set('hl', id % (N + 1))
   hl = highlight
 
+  def remove_highlighted_channel(self):
+    id = self.get('hl')
+    if id == 0: return
+    channels = self.get('channels')
+
+    if channels == '*': channels = self.channel_list
+    else: channels = channels.split(',')
+
+    # Remove channel
+    assert isinstance(channels, list)
+    channels.pop(id - 1)
+    self.set('channels', ','.join(channels))
+
   def register_shortcuts(self):
     self.register_a_shortcut('h', lambda: self.move_window(-1),
                              description='Slide window to left')
@@ -257,18 +270,18 @@ class Monitor(Plotter):
     self.register_a_shortcut('s', lambda: self.flip('smart_scale'),
                              description='Toggle smart scale')
     self.register_a_shortcut(
-      'bracketleft', lambda: self.set('xi', 0.5 * self.get('xi')),
-      description='Halve xi')
+      'bracketleft', lambda: self.set('xi', 0.5 * self.get('xi')), 'Halve xi')
     self.register_a_shortcut(
-      'bracketright', lambda: self.set('xi', 2 * self.get('xi')),
-      description='Doulbe xi')
+      'bracketright', lambda: self.set('xi', 2 * self.get('xi')), 'Doulbe xi')
 
     self.register_a_shortcut(
-      'J', lambda: self.highlight(self.get('hl') + 1),
-      description='Highlight next channel')
+      'J', lambda: self.hl(self.get('hl') + 1), 'Highlight next channel')
     self.register_a_shortcut(
-      'K', lambda: self.highlight(self.get('hl') - 1),
-      description='Highlight previous channel')
+      'K', lambda: self.hl(self.get('hl') - 1), 'Highlight previous channel')
+    self.register_a_shortcut('Return', self.hl, 'Cancel highlighting')
+
+    self.register_a_shortcut('x', self.remove_highlighted_channel,
+                             'Remove highlighted channel')
 
   # endregion: Commands and Shortcuts
 
