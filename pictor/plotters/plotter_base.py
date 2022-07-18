@@ -48,24 +48,6 @@ class Plotter(Nomear):
   @property
   def class_name(self): return self.__class__.__name__
 
-  @property
-  def sa_details(self) -> str:
-    # [names, current_values, descriptions]
-    details = [[], [], []]
-    for key, (_, typ, des) in self.settable_attributes.items():
-      details[0].append(key)
-      details[1].append(f'(={self.get(key)}, {typ.__name__})')
-      details[2].append(des)
-
-    # Calculate max_lens
-    mls = [max(len(s) for s in str_list) for str_list in details]
-
-    # Generate rows
-    rows = ['Settable attributes:', '-' * 20]
-    for key, value, description in zip(*details):
-      rows.append(f'{key:>{mls[0]}} {value:{mls[1]}}: {description:{mls[2]}}')
-    return '\n'.join(rows)
-
   # endregion: Properties
 
   # region: Methods to be overwritten
@@ -89,7 +71,9 @@ class Plotter(Nomear):
   def register_to_master(self, pictor):
     """Register self to pictor"""
     self.pictor = pictor
-    self.pictor.command_hints['set'] = lambda: self.sa_details
+    self.pictor.command_hints['set'] = lambda: self.get_sa_details()
+    self.pictor.command_hints['flip'] = lambda: self.get_sa_details(
+      [bool], 'Flippable attributes')
 
   def register_a_shortcut(self, key: str, func: Callable, description,
                           color='yellow'):
@@ -97,6 +81,24 @@ class Plotter(Nomear):
 
   def new_settable_attr(self, name, default_value, _type, description):
     self.settable_attributes[name] = [default_value, _type, description]
+
+  def get_sa_details(self, types=None, title=None) -> str:
+    # [names, current_values, descriptions]
+    details = [[], [], []]
+    for key, (_, typ, des) in self.settable_attributes.items():
+      if types is not None and not typ in types: continue
+      details[0].append(key)
+      details[1].append(f'(={self.get(key)}, {typ.__name__})')
+      details[2].append(des)
+
+    # Calculate max_lens
+    mls = [max(len(s) for s in str_list) for str_list in details]
+
+    # Generate rows
+    rows = [f'{"Settable attributes" if title is None else title}:', '-' * 20]
+    for key, value, description in zip(*details):
+      rows.append(f'{key:>{mls[0]}} {value:{mls[1]}}: {description:{mls[2]}}')
+    return '\n'.join(rows)
 
   # endregion: Public Methods
 
