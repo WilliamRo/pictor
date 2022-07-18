@@ -190,6 +190,7 @@ class Monitor(Plotter):
     x_min, x_max = ax.get_xlim()
     ax.plot([x_min, x_max], [0, 1], color='#4281f5', zorder=-99,
             alpha=0.3, linewidth=8)
+    ax.tick_params(axis='y', labelcolor='#4281f5')
 
   def _outline_bar(self, ax: plt.Axes, s: Scrolling):
     """Reference: https://matplotlib.org/stable/tutorials/intermediate/arranging_axes.html"""
