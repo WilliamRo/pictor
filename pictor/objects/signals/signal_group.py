@@ -130,6 +130,9 @@ class Annotation(Nomear):
   def curve(self):
     ticks, values = [], []
     for inter, anno in zip(self.intervals, self.annotations):
+      if ticks and values[-1] == anno:
+        ticks[-1] = inter[-1]
+        continue
       ticks.extend(list(inter))
       values.extend([anno] * 2)
     return np.array(ticks), np.array(values)
