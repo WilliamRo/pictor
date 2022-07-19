@@ -51,8 +51,7 @@ class Monitor(Plotter):
                            'Whether to use smart scale ')
     self.new_settable_attr('xi', 0.1, float, 'Margin for smart scale')
     self.new_settable_attr('hl', 0, int, 'Highlighted channel id')
-    self.new_settable_attr('annotation', False, bool,
-                           'Whether to show annotations')
+    self.new_settable_attr('annotation', None, str, 'Annotation key')
 
   # region: Properties
 
@@ -125,7 +124,7 @@ class Monitor(Plotter):
     self._plot_curve(ax, s)
 
     # Plot annotations
-    if self.get('annotation'): self._plot_annotation(ax, s)
+    self._plot_annotation(ax, s)
 
     # Show scroll-bar if necessary
     if self.get('bar'): self._outline_bar(axs[-1], s)
@@ -186,11 +185,36 @@ class Monitor(Plotter):
     ax.set_title(s.label + tail)
 
   def _plot_annotation(self, ax: plt.Axes, s: Scrolling):
+    # Get annotation
+    start_time, end_time = ax.get_xlim()
+    package = s.get_annotation(self.get('annotation'), start_time, end_time)
+    if package is None: return
+    ticks, values, labels = package
+
+    # Create a twin axis
+    color = '#4281f5'
     ax: plt.Axes = ax.twinx()
-    x_min, x_max = ax.get_xlim()
-    ax.plot([x_min, x_max], [0, 1], color='#4281f5', zorder=-99,
-            alpha=0.3, linewidth=8)
-    ax.tick_params(axis='y', labelcolor='#4281f5')
+
+    duration  = self._selected_signal.window_duration
+    if duration < 1000: width = 16
+    elif duration < 2000: width = 8
+    elif duration < 4000: width = 4
+    else: width = 2
+
+    if duration < 2000: alpha = 0.3
+    else: alpha = 0.6
+
+    ax.plot(ticks, values, color=color, zorder=999, alpha=alpha, linewidth=width)
+
+    # Customize y-axis
+    ax.tick_params(axis='y', labelcolor=color)
+    ax.set_yticks(np.arange(len(labels)))
+    ax.set_yticklabels(labels)
+
+    margin = 0.2
+    ax.set_ylim(-margin, len(labels) - 1 + margin)
+
+    ax.invert_yaxis()
 
   def _outline_bar(self, ax: plt.Axes, s: Scrolling):
     """Reference: https://matplotlib.org/stable/tutorials/intermediate/arranging_axes.html"""
@@ -313,8 +337,6 @@ class Monitor(Plotter):
 
     self.register_a_shortcut('x', self.remove_highlighted_channel,
                              'Remove highlighted channel')
-    self.register_a_shortcut('a', lambda: self.flip('annotation'),
-                             'Toggle annotation')
 
   # endregion: Commands and Shortcuts
 

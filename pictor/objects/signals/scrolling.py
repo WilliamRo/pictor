@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-=========================================================================-
-from pictor.objects.signals import DigitalSignal, SignalGroup
+from pictor.objects.signals import DigitalSignal, SignalGroup, Annotation
 from typing import Optional, Union, List
 
 import numpy as np
@@ -42,6 +42,10 @@ class Scrolling(SignalGroup):
     assert isinstance(value, float) and value > 0
     self.put_into_pocket(
       self.Keys.window_size, min(value, 1.0), exclusive=False)
+
+  @property
+  def window_duration(self):
+    return self.total_duration * self.window_size
 
   @property
   def start_position(self):
@@ -82,6 +86,13 @@ class Scrolling(SignalGroup):
       else: step = 1
       res.append((name, x[start_i:end_i:step], y[start_i:end_i:step]))
     return res
+
+  def get_annotation(self, key, start_time, end_time):
+    if key not in self.annotations: return None
+    anno: Annotation = self.annotations[key]
+    ticks, values = anno.get_ticks_values_for_plot(start_time, end_time)
+    # ticks, values = anno.curve
+    return ticks, values, anno.labels_seen
 
   def move_window(self, step_ratio, go_extreme=False):
     # If go extreme, go home if step_ratio < 0, otherwise go end

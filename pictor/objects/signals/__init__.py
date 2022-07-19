@@ -13,4 +13,5 @@
 # limitations under the License.
 # ======-=========================================================-=============
 from pictor.objects.signals.digital_signal import DigitalSignal
+from pictor.objects.signals.signal_group import Annotation
 from pictor.objects.signals.signal_group import SignalGroup
