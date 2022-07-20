@@ -19,18 +19,37 @@ from roma import Nomear
 
 class ParticleSystem(Nomear):
 
-  def __init__(self):
-    self.particle_state = OrderedDict()
-    self.constants = OrderedDict()
+  CONSTANTS = {}
+
+  check_list = {
+    ''
+  }
+
+  def __init__(self, name='Unnamed'):
+    self.name = name
+
+    self.time = 0
+    self.particle_states = OrderedDict()
     self.system_conditions = OrderedDict()
 
   # region: Properties
+
+  def notations(self):
+    return (list(self.CONSTANTS.keys()) + list(self.particle_states.keys()) +
+            list(self.system_conditions.keys()))
 
   # endregion: Properties
 
   # region: Public Methods
 
   # endregion: Public Methods
+
+  # region: Private Methods
+
+  def _sanity_check(self):
+    pass
+
+  # endregion: Private Methods
 
   # region: Abstract Methods
 
