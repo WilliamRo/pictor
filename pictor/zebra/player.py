@@ -11,12 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ======-=========================================================-=============
-"""Each data-object in this package can be recognized by its corresponding
-Plotter defined in pictor.plotters. However, each data-object is also
-self-contained.
-"""
-from pictor.objects.signals import DigitalSignal
-from pictor.objects.signals import SignalGroup
+# ====-==================================================================-======
+from pictor.plugins import Timer
+from roma import check_type
+from roma.spqr.threading import XNode
 
-from pictor.objects.particle_dynamic import ParticleSystem
+
+
+class Player(Timer, XNode):
+  pass

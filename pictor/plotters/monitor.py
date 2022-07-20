@@ -24,7 +24,8 @@ import numpy as np
 
 
 class Monitor(Plotter):
-  """A Monitor can plot multiple records simultaneously. The object should an instance of
+  """A Monitor can plot multiple records simultaneously. Each object should an
+  instance of SignalGroup, or at least an numpy array.
   """
 
   def __init__(self, pictor=None, window_duration=60, channels: str='*'):
