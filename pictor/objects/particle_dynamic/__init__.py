@@ -12,7 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ======-=========================================================-=============
-from pictor.objects.signals import DigitalSignal
-from pictor.objects.signals import SignalGroup
-
-from pictor.objects.particle_dynamic import ParticleSystem
+from .particle_system import ParticleSystem
