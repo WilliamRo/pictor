@@ -140,11 +140,11 @@ class Pictor(Easel, Database, Studio):
     plotter: Plotter = self.axes[self.Keys.PLOTTERS][index]
     for k, v in kwargs.items(): plotter.set(k, v)
 
-  def refresh(self):
+  def refresh(self, in_thread=False):
     # Refresh title
     self.title = f'{self.cursor_string} {self.static_title}'
     # Refresh canvas
-    self.canvas.refresh()
+    self.canvas.refresh(in_thread)
 
   # endregion: Public Methods
 
