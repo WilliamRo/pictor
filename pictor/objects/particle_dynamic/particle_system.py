@@ -63,6 +63,9 @@ class ParticleSystem(Nomear):
     # Initialize variable k
     self.set_variables(0, **{k: init_value})
 
+  def register_constants(self, **constants):
+    for k, v in constants.items(): self.CONSTANTS[k] = v
+
   def get_values(self, t, *keys, track=DEFAULT_TRACK):
     """Get a list of variables in time step t"""
     value_dict = self._get_variable_dict(t, track)

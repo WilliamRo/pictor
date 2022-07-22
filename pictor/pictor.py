@@ -136,6 +136,10 @@ class Pictor(Easel, Database, Studio):
     self.add_to_axis(self.Keys.PLOTTERS, plotter, index=index)
     return plotter
 
+  def set_plotter(self, index=0, **kwargs):
+    plotter: Plotter = self.axes[self.Keys.PLOTTERS][index]
+    for k, v in kwargs.items(): plotter.set(k, v)
+
   def refresh(self):
     # Refresh title
     self.title = f'{self.cursor_string} {self.static_title}'
