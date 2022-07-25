@@ -26,6 +26,7 @@ class Canvas(WidgetBase):
   class Keys:
     AXES2D = 'AxEs2d'
     AXES3D = 'AxEs3d'
+    VIEW_ANGLE_3D = 'ViEw_AnGlE_3d'
 
   def __init__(self, pictor, figure_size=(5, 5)):
     from ..pictor import Pictor
@@ -46,6 +47,15 @@ class Canvas(WidgetBase):
   def axes3D(self) -> Axes3D:
     return self.figure.add_subplot(111, projection='3d')
 
+  @property
+  def view_angle(self):
+    return self.get_from_pocket(self.Keys.VIEW_ANGLE_3D, default=(None, None))
+
+  @view_angle.setter
+  def view_angle(self, val):
+    assert isinstance(val, (list, tuple)) and len(val) == 2
+    self.put_into_pocket(self.Keys.VIEW_ANGLE_3D, val, exclusive=False)
+
   @WidgetBase.property()
   def default_plotter(self):
     from ..plotters.prompter import Prompter
@@ -64,8 +74,7 @@ class Canvas(WidgetBase):
     # Clear 3D axes if exists
     if self.in_pocket(self.Keys.AXES3D):
       axes3d = self.get_from_pocket(self.Keys.AXES3D, put_back=False)
-      # TODO: save view angle if necessary
-      # view_angle = (axes3d.elev, axes3d.azim)
+      self.view_angle = (axes3d.elev, axes3d.azim)
 
     # Clear figure
     self.figure.clear()
