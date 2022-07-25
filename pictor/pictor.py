@@ -30,6 +30,8 @@ class Pictor(Easel, Database, Studio):
     OBJECTS = 'ObJeCtS'
     PLOTTERS = 'PlOtTeRs'
     LABELS = 'LaBeLs'
+    TITLE_SUFFIX = 'TiTlE_sUfFiX'
+    ALLOW_MAIN_THREAD_REFRESH = 'MaIn_ThReAd_ReFrEsH'
 
   def __init__(self, title='Pictor', figure_size=(5, 5)):
     # Call parent's constructor
@@ -77,6 +79,14 @@ class Pictor(Easel, Database, Studio):
     plotter = self.get_element(self.Keys.PLOTTERS)
     if plotter is None: return self.canvas.default_plotter
     return plotter
+
+  @property
+  def title_suffix(self) -> str:
+    return self.get_from_pocket(self.Keys.TITLE_SUFFIX, '', put_back=False)
+
+  @title_suffix.setter
+  def title_suffix(self, suffix):
+    self.put_into_pocket(self.Keys.TITLE_SUFFIX, suffix, exclusive=False)
 
   # endregion: Properties
 
@@ -140,11 +150,18 @@ class Pictor(Easel, Database, Studio):
     plotter: Plotter = self.axes[self.Keys.PLOTTERS][index]
     for k, v in kwargs.items(): plotter.set(k, v)
 
-  def refresh(self, in_thread=False):
+  def refresh(self, wait_for_idle=False):
+    if not wait_for_idle and not self.get_from_pocket(
+        self.Keys.ALLOW_MAIN_THREAD_REFRESH, default=True):
+      return
     # Refresh title
-    self.title = f'{self.cursor_string} {self.static_title}'
+    self.title = f'{self.cursor_string} {self.static_title}{self.title_suffix}'
     # Refresh canvas
-    self.canvas.refresh(in_thread)
+    self.canvas.refresh(wait_for_idle)
+
+  def allow_main_thread_refreshing(self, val: bool):
+    self.put_into_pocket(self.Keys.ALLOW_MAIN_THREAD_REFRESH,
+                         val, exclusive=False)
 
   # endregion: Public Methods
 

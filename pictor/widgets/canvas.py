@@ -74,7 +74,7 @@ class Canvas(WidgetBase):
 
   # region: Abstract Methods
 
-  def refresh(self, in_thread=False):
+  def refresh(self, wait_for_idle=False):
     # Clear figure
     self._clear()
 
@@ -84,7 +84,7 @@ class Canvas(WidgetBase):
     # Tight layout and refresh
     self.figure.tight_layout()
 
-    if in_thread: self._canvas.draw_idle()
+    if wait_for_idle: self._canvas.draw_idle()
     else: self._canvas.draw()
 
   # endregion: Abstract Methods

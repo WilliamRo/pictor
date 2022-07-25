@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # -============================================================================-
+import numpy as np
+
 from roma import Nomear
 
 import time
@@ -35,6 +37,7 @@ class Timer(Nomear):
 
     L = len(tics)
     if L < 2: return 0
+    elif tics[-1] == tics[0]: return 9999
     return (L - 1) / (tics[-1] - tics[0])
 
 

@@ -66,7 +66,7 @@ class Plotter(Nomear):
 
   # region: Public Methods
 
-  def refresh(self, in_thread=False): self.pictor.refresh(in_thread)
+  def refresh(self, wait_for_idle=False): self.pictor.refresh(wait_for_idle)
 
   def register_to_master(self, pictor):
     """Register self to pictor"""
