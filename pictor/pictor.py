@@ -75,6 +75,9 @@ class Pictor(Easel, Database, Studio):
     self.put_into_pocket(self.Keys.LABELS, values)
 
   @property
+  def plotters(self): return self.axes[self.Keys.PLOTTERS]
+
+  @property
   def active_plotter(self) -> Plotter:
     plotter = self.get_element(self.Keys.PLOTTERS)
     if plotter is None: return self.canvas.default_plotter
