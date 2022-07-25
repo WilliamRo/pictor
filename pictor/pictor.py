@@ -149,9 +149,9 @@ class Pictor(Easel, Database, Studio):
     self.add_to_axis(self.Keys.PLOTTERS, plotter, index=index)
     return plotter
 
-  def set_plotter(self, index=0, **kwargs):
+  def config_plotter(self, index=0, **kwargs):
     plotter: Plotter = self.axes[self.Keys.PLOTTERS][index]
-    for k, v in kwargs.items(): plotter.set(k, v)
+    for k, v in kwargs.items(): plotter.set(k, v, auto_refresh=False)
 
   def refresh(self, wait_for_idle=False):
     if not wait_for_idle and not self.get_from_pocket(

@@ -118,7 +118,7 @@ class Plotter(Nomear):
 
   # region: Commands
 
-  def set(self, key, value=None):
+  def set(self, key, value=None, auto_refresh=True):
     if key == '??':
       # TODO: show a table of all settable attributes
       console.show_info(f'All settable attributes of `{self.class_name}`:')
@@ -139,7 +139,7 @@ class Plotter(Nomear):
     console.show_status(f'{self.class_name}.{key} set to {value}')
 
     # Refresh canvas
-    self.refresh()
+    if auto_refresh: self.refresh()
 
   def get(self, key):
     self._check_attribute(key)
