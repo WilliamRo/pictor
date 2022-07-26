@@ -41,20 +41,25 @@ class ParticleSystem(Nomear):
 
   # region: Public Methods
 
-  def register_var(self, k, shape, init_value=None, dtype=np.float):
+  def register_var(self, k, shape, init_value=None, dtype=np.float,
+                   is_global_var=False,):
     """Initialize a variable.
 
     :param k: variable key
     :param shape: variable shape
     :param init_value: initial values. Will be set to zeros if not provided.
     :param dtype: data type
+    :param is_global_var: whether this var is a global var
     """
     # Register shape
     if k in self.variable_shapes:
       raise KeyError(f'!! Variable `{k}` already exists')
-    if isinstance(shape, int): shape = [shape]
-    shape = [self.num_particles] + list(shape)
-    self.variable_shapes[k] = tuple(shape)
+
+    if shape is None: self.variable_shapes[k] = None
+    else:
+      if isinstance(shape, int): shape = [shape]
+      if not is_global_var: shape = [self.num_particles] + list(shape)
+      self.variable_shapes[k] = tuple(shape)
 
     # Set init_value to 0 if not provided
     if init_value is None: init_value = np.zeros(shape, dtype=dtype)
@@ -84,10 +89,13 @@ class ParticleSystem(Nomear):
       if k not in self.variable_shapes:
         raise KeyError(f'!! `{k}` has not been registered yet')
       shape = self.variable_shapes[k]
-      if not isinstance(v, np.ndarray):
-        raise TypeError(f'!! `{k}` should be an np.ndarray')
-      if shape != v.shape: raise AssertionError(
-        f'!! `{k}`.shape should be {shape} instead of {v.shape}')
+
+      # If valid shape is provided, make sure v.shape == valid shape
+      if shape is not None:
+        if not isinstance(v, np.ndarray):
+          raise TypeError(f'!! `{k}` should be an np.ndarray')
+        if shape != v.shape: raise AssertionError(
+          f'!! `{k}`.shape should be {shape} instead of {v.shape}')
 
       # Set variable
       var_dict[k] = v
