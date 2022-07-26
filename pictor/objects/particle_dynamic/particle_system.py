@@ -120,7 +120,7 @@ class ParticleSystem(Nomear):
     where t is the latest time step of specified track"""
     # Get package
     last_t = list(self.timelines[track].keys())[-1]
-    pkg = self._get_variable_dict(last_t, track)
+    pkg = {**self._get_variable_dict(last_t, track)}
     pkg.update(self.CONSTANTS)
 
     # Run simulation

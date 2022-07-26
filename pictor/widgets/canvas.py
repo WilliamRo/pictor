@@ -97,3 +97,11 @@ class Canvas(WidgetBase):
     else: self._canvas.draw()
 
   # endregion: Abstract Methods
+
+  # region: Public Methods
+
+  def move_view_angle(self, d_elev: float, d_azim: float):
+    if self.view_angle[0] is None: return
+    self.view_angle = (self.view_angle[0] + d_elev, self.view_angle[1] + d_azim)
+
+  # endregion: Public Methods

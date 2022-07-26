@@ -29,15 +29,15 @@ class Plotter(Nomear):
     self.func: Callable = func
     self.pictor: Optional[Pictor] = None
 
+    # Register if provided
+    if pictor is not None: self.register_to_master(pictor)
+
     # Shortcut will be accessed by roma.art.Shortcut
     self.shortcuts = OrderedDict()
     self.register_shortcuts()
 
     # name: (value, data_type, description)
     self.settable_attributes = OrderedDict()
-
-    # Register if provided
-    if pictor is not None: self.register_to_master(pictor)
 
   # region: Properties
 
