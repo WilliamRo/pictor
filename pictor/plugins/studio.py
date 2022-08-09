@@ -25,10 +25,17 @@ class Studio(object):
 
   # region: Animate
 
-  def animate(self, fps: float = 2, scripts=None, cursor_range: str = None,
-              fmt: str = 'gif', path: str = None, n_tail: int = 0):
+  def animate(self, fps: float = 2, scripts: str = None,
+              cursor_range: str = None, fmt: str = 'gif', path: str = None,
+              n_tail: int = 0):
     """Export animation. The basic syntax is
-    `ani [axis] [fps] [cursor_range] [format] [path] [n_tail]`
+     `ani [fps] [scripts] [cursor_range] [format] [path] [n_tail]`
+
+    Examples
+    --------
+      ani 5
+      ani 8 p 10:20 path=/home/william/gifs
+      ani 10 fmt=mp4 n_tail=10
 
     Arguments
     ---------
@@ -77,6 +84,8 @@ class Studio(object):
 
     # Create function
     def func(i):
+      p = i - 1 if begin <= i <= end + 1 else end
+      console.print_progress(p, len(scripts))
       # Negative indices are for creating tails when `fmt` is 'mp4'
       if i < 0: return
       # Call the i-th script, here scripts = [s_1, s_2, s_3, ...]

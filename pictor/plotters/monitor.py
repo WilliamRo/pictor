@@ -242,6 +242,57 @@ class Monitor(Plotter):
     ds = ss.dominate_signal
     self.goto_position((time - ds.ticks[0]) / ss.total_duration)
 
+  def anit(self, fps: float, time_interval: str = None, step: int = None,
+           fmt: str = 'gif', path: str = None, n_tail: int = 0):
+    """Export monitor screen with given time interval. Syntax:
+     `anit [fps] [time_interval] [format] [path] [n_tail]`
+
+    Examples
+    --------
+      anit 5 step=10
+      anit 8 10000:12000 path=/home/william/gifs
+      anit 10 fmt=mp4 n_tail=10
+
+    Arguments
+    ---------
+    fps: Frame per second
+    time_interval: Time interval (in seconds) to create animation.
+                   E.g., 10000:20000.
+    step: window sliding step. If not provided, will be set according to
+          self.settable_attributes['step']
+    fmt: Format of exported file, can be 'gif' or 'mp4'.
+         If `fmt` is `mp4`, ffmpeg must be installed.
+    path: Path to save the file
+    n_tail: A workaround to avoid losing last few frames when export mp4
+    """
+    import re
+
+    # -------------------------------------------------------------------------
+    #  Create scripts
+    # -------------------------------------------------------------------------
+    ss = self._selected_signal
+    ds = ss.dominate_signal
+
+    # Check `time_interval` if provided
+    if time_interval is not None:
+      if re.match('^\d+:\d+$', time_interval) is None:
+        raise ValueError('!! Illegal time interval `{}`'.format(time_interval))
+      begin, end = [int(n) for n in time_interval.split(':')]
+    else: begin, end = ds.ticks[0], ds.ticks[-1]
+
+    # Get window parameters
+    win_dur = ss.window_duration
+    if step is None: step = win_dur * self.get('step')
+
+    # Calculate script length and create scripts
+    num = int((end - begin - win_dur) / step)
+    begins = np.linspace(begin, end - win_dur, num=num)
+    scripts = [lambda _t=t: self.goto(_t) for t in begins]
+    # -------------------------------------------------------------------------
+    #  Call animate to create animation
+    # -------------------------------------------------------------------------
+    self.pictor.animate(fps, scripts, fmt=fmt, path=path, n_tail=n_tail)
+
   # endregion: Public Methods
 
   # region: Commands and Shortcuts
@@ -259,6 +310,7 @@ class Monitor(Plotter):
     self.refresh()
 
   def set_win_duration(self, duration: float):
+    """Set window duration (in secs)."""
     assert duration > 0
     self._selected_signal.set_window_duration(duration)
     self.refresh()
