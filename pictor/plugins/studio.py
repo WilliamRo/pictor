@@ -23,44 +23,85 @@ class Studio(object):
   """This plugin contains functions for exporting animations created from
   canvas"""
 
-  def animate(self, axis: str = None, fps: float = 2, cursor_range: str = None,
-              fmt: str = 'gif', path: str = None, n_tail: int = 0):
+  # region: Animate
+
+  def animate(self, fps: float = 2, scripts: str = None,
+              cursor_range: str = None, fmt: str = 'gif', path: str = None,
+              n_tail: int = 0):
     """Export animation. The basic syntax is
-    `ani [axis] [fps] [cursor_range] [format] [path] [n_tail]`
+     `ani [fps] [scripts] [cursor_range] [format] [path] [n_tail]`
+
+    Examples
+    --------
+      ani 5
+      ani 8 p 10:20 path=/home/william/gifs
+      ani 10 fmt=mp4 n_tail=10
 
     Arguments
     ---------
-    axis: Axis to traverse through, should be in ['o', 'p'] (correspoding to
-          objects and plotters, respectively)
     fps: Frame per second
+    scripts: Scripts to play, could be
+             (1) a list/tuple of callable function or
+             (2) one of 'o' or 'p', corresponding to objects and plotters,
+                 respectively, to traverse through
     cursor_range: Range of cursor, e.g., `10:20`
     fmt: Format of exported file, can be 'gif' or 'mp4'
     path: Path to save the file
     n_tail: A workaround to avoid losing last few frames when export mp4
 
     If `fmt` is `mp4`, ffmpeg must be installed.
-    Official instruction for windows system: https://www.wikihow.com/Install-FFmpeg-on-Windows
+    Official instruction for windows system:
+    https://www.wikihow.com/Install-FFmpeg-on-Windows
     """
     from pictor.pictor import Pictor
     assert isinstance(self, Pictor)
 
-    # Set function
-    if axis == 'o':
-      _func = self.so
-      elements = self.axes[self.Keys.OBJECTS]
-    elif axis == 'p':
-      _func = self.sp
-      elements = self.axes[self.Keys.PLOTTERS]
-    else: raise ValueError('!! First parameter must be `o` or `p`')
+    # -------------------------------------------------------------------------
+    #  Set function and cursor
+    # -------------------------------------------------------------------------
+    tgt = 'scripts'
+    # Set default scripts if not provided
+    if scripts is None:
+      if len(self.objects) > 1: scripts = 'o'
+      else: scripts = 'p'
+    if scripts in ('o', 'p'):
+      _func, elements, tgt = {
+        'o': (self.so, self.objects, 'objects'),
+        'p': (self.sp, self.plotters, 'plotters')}[scripts]
+      scripts = [lambda _i=i: _func(_i + 1) for i in range(len(elements))]
+
+    # Make sure scripts is a list/tuple of callable functions
+    for f in scripts:
+      if not callable(f):
+        raise AssertionError('!! Elements in scripts should be callable.')
 
     # Find cursor range
-    if cursor_range is None: begin, end = 1, len(elements)
+    if cursor_range is None: begin, end = 1, len(scripts)
     else:
       if re.match('^\d+:\d+$', cursor_range) is None:
         raise ValueError('!! Illegal cursor range `{}`'.format(cursor_range))
       begin, end = [int(n) for n in cursor_range.split(':')]
 
-    # Find path
+    # Create function
+    def func(i):
+      p = i - 1 if begin <= i <= end + 1 else end
+      console.print_progress(p, len(scripts))
+      # Negative indices are for creating tails when `fmt` is 'mp4'
+      if i < 0: return
+      # Call the i-th script, here scripts = [s_1, s_2, s_3, ...]
+      scripts[i - 1]()
+
+    # Create frames (arguments passed to `func`)
+    frames = list(range(begin, end + 1))
+    # TODO: directly export mp4 file will lose last few frames. Use this code
+    #       block to circumvent this issue temporarily
+    console.show_status(
+      'Saving animation ({}[{}:{}]) ...'.format(tgt, frames[0], frames[-1]))
+    if fmt == 'mp4' and n_tail > 0: frames.extend([-1] * n_tail)
+
+    # -------------------------------------------------------------------------
+    #  Find path to save
+    # -------------------------------------------------------------------------
     if fmt not in ('gif', 'mp4'):
       raise KeyError('!! `fmt` should be `gif` or `mp4`')
     if path is None:
@@ -69,31 +110,22 @@ class Studio(object):
     if re.match('.*\.{}$'.format(fmt), path) is None:
       path += '.{}'.format(fmt)
 
-    # Find movie writer
-    writer = None if fmt == 'gif' else animation.FFMpegWriter(fps=fps)
-
-    # Create animation
-    tgt = 'objects' if axis == 'o' else 'plotters'
-    frames = list(range(begin, end + 1))
-
-    # TODO: directly export mp4 file will lose last few frames. Use this code
-    #       block to circumvent this issue temporarily
-    if fmt == 'mp4' and n_tail > 0:
-      frames.extend([frames[-1] for _ in range(n_tail)])
-
-    console.show_status(
-      'Saving animation ({}[{}:{}]) ...'.format(tgt, frames[0], frames[-1]))
-    def func(n):
-      console.print_progress(n - begin, total=end - begin)
-      _func(n)
-
+    # -------------------------------------------------------------------------
+    #  Create animation
+    # -------------------------------------------------------------------------
     # This line is important when this Board is not shown
     self.refresh()
 
     ani = animation.FuncAnimation(
       self.canvas.figure, func, frames=frames, interval=1000 / fps)
+
+    # Save animation using writer
+    writer = None if fmt == 'gif' else animation.FFMpegWriter(fps=fps)
     ani.save(path, writer=writer)
+
     console.show_status('Animation saved to `{}`.'.format(path))
 
   # Abbreviation
   ani = animate
+
+  # endregion: Animate
