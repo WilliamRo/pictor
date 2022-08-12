@@ -80,9 +80,10 @@ class SignalGroup(Nomear):
   # region: Special Methods
 
   def __getitem__(self, item):
-    if item not in self.signal_labels:
+    if item not in self.channel_signal_dict:
       raise KeyError(f'!! Signal label `{item}` not found')
-    return self.digital_signals[self.signal_labels.index(item)]
+    ds = self.channel_signal_dict[item]
+    return ds[item]
 
   # endregion: Special Methods
 
