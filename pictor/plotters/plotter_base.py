@@ -176,7 +176,9 @@ class Plotter(Nomear):
         kwargs[k] = self.pictor.canvas.axes3D
       elif k in ('title', 'label'):
         obj_cursor = self.pictor.cursors[self.pictor.Keys.OBJECTS]
-        kwargs[k] = self.pictor.labels[obj_cursor]
+        if self.pictor.labels is not None:
+          kwargs[k] = self.pictor.labels[obj_cursor]
+        else: kwargs[k] = None
       elif hasattr(self, k):
         kwargs[k] = getattr(self, k)
 
