@@ -41,20 +41,31 @@ class LargeImage(Nomear):
 
   @property
   def roi_thumbnail(self):
+    if self.roi_range == [[0, 1], [0, 1]]: return self.image_thumbnail
+
     h_rg, w_rg = [(int(rg[0] * sz), int(rg[1] * sz))
                   for rg, sz in zip(self.roi_range, self.image_size)]
     roi = self.image[h_rg[0]:h_rg[1], w_rg[0]:w_rg[1]]
     return self.shrink_im(roi, self.thumbnail_size)
+
+  @property
+  def image_thumbnail(self):
+    ts = self.thumbnail_size
+    key = f'image_thumbnail_{ts}'
+    return self.get_from_pocket(key, initializer=lambda: self.shrink_im(
+      self.image, ts))
 
   # endregion: Properties
 
   # region: Public Methods
 
   @classmethod
-  def wrap(cls, im: np.ndarray):
+  def wrap(cls, im: np.ndarray, max_size=None):
     """Wrap an image as LargeImage"""
-    if im not in cls.large_images: cls.large_images[im] = LargeImage(im)
-    return cls.large_images
+    key = str(im)
+    if key not in cls.large_images:
+      cls.large_images[key] = LargeImage(im, thumbnail_size=max_size)
+    return cls.large_images[key]
 
   @staticmethod
   def shrink_im(im: np.ndarray, max_size: int):
@@ -83,7 +94,7 @@ class LargeImage(Nomear):
   def move_roi(self, h_step=0, w_step=0):
     new_roi_range = [[], []]
     for i, (step, size) in enumerate(zip((h_step, w_step), self.roi_size)):
-      delta = int(step * size)
+      delta = step * size
       range_after_move = self._check_range(
         [x + delta for x in self.roi_range[i]])
 
