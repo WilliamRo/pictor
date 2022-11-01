@@ -92,6 +92,7 @@ class Plotter(Nomear):
       details[2].append(des)
 
     # Calculate max_lens
+    if len(details[0]) == 0: return 'No settable attributes found'
     mls = [max(len(s) for s in str_list) for str_list in details]
 
     # Generate rows
