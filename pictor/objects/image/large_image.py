@@ -19,6 +19,11 @@ import numpy as np
 
 
 class LargeImage(Nomear):
+  """This class is designed for visualizing large images of
+     (1) 2D or 3D; (2) grey or RGB.
+
+     Data format: (1) depth first; (2) channel last.
+  """
 
   large_images = {}
 
@@ -26,10 +31,16 @@ class LargeImage(Nomear):
     self.image = im
     self.thumbnail_size = thumbnail_size
 
-    # ROI range
+    # ROI range of H/W dimensions
     self.roi_range = [[0, 1], [0, 1]]
 
   # region: Properties
+
+  @property
+  def dimension(self): return self.get_im_dim(self.image)
+
+  @property
+  def depth(self): return self.image.shape[0] if self.dimension == 3 else 1
 
   @property
   def roi_size(self):
@@ -37,7 +48,9 @@ class LargeImage(Nomear):
             self.roi_range[1][1] - self.roi_range[1][0])
 
   @property
-  def image_size(self): return self.image.shape[:2]
+  def image_size(self):
+    if self.dimension == 3: return self.image.shape[1:3]
+    return self.image.shape[:2]
 
   @property
   def roi_thumbnail(self):
@@ -45,7 +58,11 @@ class LargeImage(Nomear):
 
     h_rg, w_rg = [(int(rg[0] * sz), int(rg[1] * sz))
                   for rg, sz in zip(self.roi_range, self.image_size)]
-    roi = self.image[h_rg[0]:h_rg[1], w_rg[0]:w_rg[1]]
+
+    if self.dimension == 3:
+      roi = self.image[:, h_rg[0]:h_rg[1], w_rg[0]:w_rg[1]]
+    else: roi = self.image[h_rg[0]:h_rg[1], w_rg[0]:w_rg[1]]
+
     return self.shrink_im(roi, self.thumbnail_size)
 
   @property
@@ -67,14 +84,18 @@ class LargeImage(Nomear):
       cls.large_images[key] = LargeImage(im, thumbnail_size=max_size)
     return cls.large_images[key]
 
-  @staticmethod
-  def shrink_im(im: np.ndarray, max_size: int):
+  @classmethod
+  def shrink_im(cls, im: np.ndarray, max_size: int):
     """Shrink image according to `max_size`.
-    im: should be of shape [H, W, ...]
+    im: should be of shape [[D, ]H, W, ...]
     """
     if max_size is None: return im
 
-    H, W = im.shape[:2]
+    # Get H, W according to dimension
+    dim = cls.get_im_dim(im)
+    if dim == 3: H, W = im.shape[1:3]
+    else: H, W = im.shape[:2]
+
     if max(H, W) <= max_size: return im
     if H > W:
       h = max_size
@@ -85,7 +106,20 @@ class LargeImage(Nomear):
 
     # To shrink an image, it will generally look best with #INTER_AREA
     import cv2
-    return cv2.resize(im, dsize=(h, w), interpolation=cv2.INTER_AREA)
+    resize = lambda x: cv2.resize(x, dsize=(h, w), interpolation=cv2.INTER_AREA)
+    if dim == 2: return resize(im)
+    # For 3-D stack
+    return np.stack([resize(im2d) for im2d in im], axis=0)
+
+  @staticmethod
+  def get_im_dim(im: np.ndarray):
+    # For grey images
+    dim_modifier = 0
+    # For RGB images and grey images with last dim equal to 1
+    if im.shape[-1] in (1, 3): dim_modifier = -1
+    dim = len(im.shape) + dim_modifier
+    assert dim in (2, 3)
+    return dim
 
   def set_roi(self, h_range=(0, 1), w_range=(0, 1)):
     self.roi_range = [
