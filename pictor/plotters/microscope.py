@@ -19,6 +19,7 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pictor.objects.image.large_image import LargeImage
 from pictor.plotters.plotter_base import Plotter
+from roma import console
 
 
 
@@ -36,6 +37,7 @@ class Microscope(Plotter):
 
     self.new_settable_attr('color_bar', False, bool, 'Color bar')
     self.new_settable_attr('k_space', False, bool, 'Whether to show k-space')
+    self.new_settable_attr('hist', False, bool, 'Whether to show histogram')
     self.new_settable_attr('log', False, bool, 'Use log-scale in k-space')
     self.new_settable_attr('vmin', None, float, 'Min value')
     self.new_settable_attr('vmax', None, float, 'Max value')
@@ -46,6 +48,13 @@ class Microscope(Plotter):
     self.new_settable_attr('mini_map_size', 0.3, float, 'Size of mini-map')
     self.new_settable_attr('move_step', 0.2, float, 'Moving step')
     self.new_settable_attr('share_roi', True, bool, 'Whether to share ROI')
+
+  # region: Properties
+
+  @property
+  def share_roi(self): return self.get('share_roi')
+
+  # endregion: Properties
 
   # region: Plot Methods
 
@@ -68,6 +77,14 @@ class Microscope(Plotter):
     if li.dimension == 3:
       x = x[self.pictor.get_element('DePtH')]
 
+    # Show title if provided
+    if label is not None and self.get('title'): ax.set_title(label)
+
+    # Show histogram if required
+    if self.get('hist'):
+      self._show_histogram(x, ax)
+      return
+
     # Do 2D DFT if required
     if self.get('k_space'):
       x: np.ndarray = np.abs(np.fft.fftshift(np.fft.fft2(x)))
@@ -84,12 +101,13 @@ class Microscope(Plotter):
       cax = divider.append_axes('right', size='5%', pad=0.05)
       fig.colorbar(im, cax=cax)
 
-    # Show title if provided
-    if label is not None and self.get('title'): ax.set_title(label)
-
     # Show mini-map if required
     if self.get('mini_map'): self._show_mini_map(li, ax)
 
+  def _show_histogram(self, x: np.ndarray, ax: plt.Axes):
+    x = np.ravel(x)
+    ax.hist(x=x, bins=50)
+    ax.set_axis_on()
 
   def _show_mini_map(self, li: LargeImage, ax: plt.Axes):
     # Configs
@@ -138,13 +156,19 @@ class Microscope(Plotter):
     if ratio == 1.0: return
 
     li: LargeImage = self._current_li
-
     li.set_roi(*[self._set_range(ratio, *li.roi_range[i]) for i in (0, 1)])
+    if self.share_roi: self.sync_roi()
     self.refresh()
 
   def move_roi(self, h_step: float, w_step: float):
     self._current_li.move_roi(h_step, w_step)
+    if self.share_roi: self.sync_roi()
     self.refresh()
+
+  def sync_roi(self):
+    for im in self.pictor.objects:
+      li = LargeImage.wrap(im)
+      li.set_roi(*self._current_li.roi_range)
 
   # endregion: ROI
 
@@ -152,6 +176,14 @@ class Microscope(Plotter):
 
 
   # endregion: Private Methods
+
+  # region: APIs
+
+  def show_image_size(self):
+    console.show_info(
+      f'Shape of selected image: {self._current_li.image.shape}')
+
+  # endregion: APIs
 
   # region: Commands
 
@@ -167,6 +199,8 @@ class Microscope(Plotter):
       'Turn on/off log scale in k-space view')
     self.register_a_shortcut(
       'M', lambda: self.flip('mini_map'), 'Turn on/off mini-map')
+    self.register_a_shortcut(
+      'space', lambda: self.flip('hist'), 'Toggle histogram')
 
     # Zoom in/out
     self.register_a_shortcut('O', lambda: self.zoom(2.0), 'Zoom out')
@@ -181,6 +215,7 @@ class Microscope(Plotter):
       'H', lambda: self.move_roi(0, -self.get('move_step')), 'Move to west')
     self.register_a_shortcut(
       'L', lambda: self.move_roi(0, self.get('move_step')), 'Move to east')
+    self.register_a_shortcut('Tab', self.show_image_size, 'Show image size')
 
   def set_value(self, vmin: str = None, vmax: str = None):
     """Set minimum value and maximum value"""
@@ -190,3 +225,50 @@ class Microscope(Plotter):
   sv = set_value
 
   # endregion: Commands
+
+  # region: Animation
+
+  def anid(self, fps: float, depth_interval: str = None, step: int = 1,
+           fmt: str = 'gif', path: str = None, n_tail: int = 0):
+    """Export microscope ROI with given depth interval. Syntax:
+     `anit [fps] [depth_interval] [step] [format] [path] [n_tail]`
+
+    Examples
+    --------
+      anid 5 step=10
+      anid 8 10000:12000 path=/home/william/gifs
+      anid 10 fmt=mp4 n_tail=10
+
+    Arguments
+    ---------
+    fps: Frame per second;
+    depth_interval: Depth interval to create animation. E.g., 50:100;
+    step: depth sliding step.
+    fmt: Format of exported file, can be 'gif' or 'mp4'.
+         If `fmt` is `mp4`, ffmpeg must be installed;
+    path: Path to save the file;
+    n_tail: A workaround to avoid losing last few frames when export mp4.
+    """
+    import re
+
+    if self._current_li.dimension == 2: raise AssertionError(
+      '!! cannot generate animation for 2-D images')
+
+    # -------------------------------------------------------------------------
+    #  Create scripts
+    # -------------------------------------------------------------------------
+    # Check `time_interval` if provided
+    if depth_interval is not None:
+      if re.match('^\d+:\d+$', depth_interval) is None:
+        raise ValueError('!! Illegal time interval `{}`'.format(depth_interval))
+      begin, end = [int(n) for n in depth_interval.split(':')]
+    else: begin, end = 1, self._current_li.image.shape[0]
+
+    # Calculate script length and create scripts
+    scripts = [lambda _i=i: self.pictor.sd(_i) for i in range(begin, end, step)]
+    # -------------------------------------------------------------------------
+    #  Call animate to create animation
+    # -------------------------------------------------------------------------
+    self.pictor.animate(fps, scripts, fmt=fmt, path=path, n_tail=n_tail)
+
+  # endregion: Animation
