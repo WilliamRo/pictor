@@ -195,7 +195,7 @@ class Microscope(Plotter):
     self.register_a_shortcut(
       'F', lambda: self.flip('k_space'), 'Turn on/off k-space view')
     self.register_a_shortcut(
-      'L', lambda: self.flip('log'),
+      'G', lambda: self.flip('log'),
       'Turn on/off log scale in k-space view')
     self.register_a_shortcut(
       'M', lambda: self.flip('mini_map'), 'Turn on/off mini-map')
