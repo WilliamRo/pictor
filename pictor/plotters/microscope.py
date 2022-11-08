@@ -41,6 +41,8 @@ class Microscope(Plotter):
     self.new_settable_attr('log', False, bool, 'Use log-scale in k-space')
     self.new_settable_attr('vmin', None, float, 'Min value')
     self.new_settable_attr('vmax', None, float, 'Max value')
+    self.new_settable_attr('vsigma', None, int, 'Sigma coefficient for smart '
+                                                'value clipping')
     self.new_settable_attr('cmap', None, float, 'Color map')
     self.new_settable_attr('interpolation', None, str, 'Interpolation method')
     self.new_settable_attr('title', False, bool, 'Whether to show title')
@@ -90,10 +92,12 @@ class Microscope(Plotter):
       x: np.ndarray = np.abs(np.fft.fftshift(np.fft.fft2(x)))
       if self.get('log'): x: np.ndarray = np.log(x + 1e-10)
 
+    # Get vmin and vmax
+    vmin, vmax = self._get_vrange()
+
     # Show image
-    im = ax.imshow(x, cmap=self.get('cmap'),
-                   interpolation=self.get('interpolation'),
-                   vmin=self.get('vmin'), vmax=self.get('vmax'))
+    im = ax.imshow(x, vmin=vmin, vmax=vmax, cmap=self.get('cmap'),
+                   interpolation=self.get('interpolation'))
 
     # Show color bar if required
     if self.get('color_bar'):
@@ -174,6 +178,25 @@ class Microscope(Plotter):
 
   # region: Private Methods
 
+  def _get_vrange(self):
+    v_min, v_max = None, None
+
+    # Get mean and sigma if necessary
+    vsigma = self.get('vsigma')
+    if isinstance(vsigma, int) and vsigma > 0:
+      li = self._current_li
+      mu = self.get_from_pocket(
+        f'{str(li)}-mu', initializer=lambda: np.mean(li.image))
+      sigma = self.get_from_pocket(
+        f'{str(li)}-sigma', initializer=lambda: np.std(li.image))
+
+      # Set v-range
+      v_min, v_max = mu - vsigma * sigma, mu + vsigma * sigma
+
+    # `vmin` and `vmax` have highest priority
+    if self.get('vmin') is not None: v_min = self.get('vmin')
+    if self.get('vmax') is not None: v_max = self.get('vmax')
+    return v_min, v_max
 
   # endregion: Private Methods
 
