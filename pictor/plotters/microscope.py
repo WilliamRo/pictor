@@ -203,8 +203,15 @@ class Microscope(Plotter):
   # region: APIs
 
   def show_image_size(self):
-    console.show_info(
-      f'Shape of selected image: {self._current_li.image.shape}')
+    # Get current large image
+    li = self._current_li
+
+    # Show whole shape
+    console.show_info(f'Shape of selected image: {li.image.shape}')
+
+    # Show slices
+    h_rg, w_rg = li.roi_hw_slices
+    console.show_info(f'ROI range: [{h_rg[0]}:{h_rg[1]}, {w_rg[0]}:{w_rg[1]}]')
 
   # endregion: APIs
 

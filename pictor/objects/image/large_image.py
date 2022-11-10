@@ -53,11 +53,15 @@ class LargeImage(Nomear):
     return self.image.shape[:2]
 
   @property
+  def roi_hw_slices(self):
+    return [(int(rg[0] * sz), int(rg[1] * sz))
+            for rg, sz in zip(self.roi_range, self.image_HW)]
+
+  @property
   def roi_thumbnail(self):
     if self.roi_range == [[0, 1], [0, 1]]: return self.image_thumbnail
 
-    h_rg, w_rg = [(int(rg[0] * sz), int(rg[1] * sz))
-                  for rg, sz in zip(self.roi_range, self.image_HW)]
+    h_rg, w_rg = self.roi_hw_slices
 
     if self.dimension == 3:
       roi = self.image[:, h_rg[0]:h_rg[1], w_rg[0]:w_rg[1]]
