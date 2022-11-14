@@ -56,6 +56,15 @@ class Microscope(Plotter):
   @property
   def share_roi(self): return self.get('share_roi')
 
+  @property
+  def mean_std_of_this_li(self):
+    li = self._current_li
+    mu = self.get_from_pocket(
+      f'{str(li)}-mu', initializer=lambda: np.mean(li.image))
+    sigma = self.get_from_pocket(
+      f'{str(li)}-sigma', initializer=lambda: np.std(li.image))
+    return mu, sigma
+
   # endregion: Properties
 
   # region: Plot Methods
@@ -184,11 +193,7 @@ class Microscope(Plotter):
     # Get mean and sigma if necessary
     vsigma = self.get('vsigma')
     if isinstance(vsigma, int) and vsigma > 0:
-      li = self._current_li
-      mu = self.get_from_pocket(
-        f'{str(li)}-mu', initializer=lambda: np.mean(li.image))
-      sigma = self.get_from_pocket(
-        f'{str(li)}-sigma', initializer=lambda: np.std(li.image))
+      mu, sigma = self.mean_std_of_this_li
 
       # Set v-range
       v_min, v_max = mu - vsigma * sigma, mu + vsigma * sigma
@@ -202,12 +207,15 @@ class Microscope(Plotter):
 
   # region: APIs
 
-  def show_image_size(self):
+  def show_image_info(self):
     # Get current large image
     li = self._current_li
 
     # Show whole shape
-    console.show_info(f'Shape of selected image: {li.image.shape}')
+    console.show_info(f'Current selected image info:')
+    console.supplement(f'shape: {li.image.shape};', level=2)
+    mu, sigma = self.mean_std_of_this_li
+    console.supplement(f'values: {mu:.2f}+-{sigma:.2f};', level=2)
 
     # Show slices
     h_rg, w_rg = li.roi_hw_slices
@@ -245,7 +253,7 @@ class Microscope(Plotter):
       'H', lambda: self.move_roi(0, -self.get('move_step')), 'Move to west')
     self.register_a_shortcut(
       'L', lambda: self.move_roi(0, self.get('move_step')), 'Move to east')
-    self.register_a_shortcut('Tab', self.show_image_size, 'Show image size')
+    self.register_a_shortcut('Tab', self.show_image_info, 'Show image size')
 
   def set_value(self, vmin: str = None, vmax: str = None):
     """Set minimum value and maximum value"""
