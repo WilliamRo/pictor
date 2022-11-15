@@ -39,6 +39,9 @@ class Retina(Plotter):
     self.new_settable_attr('cmap', None, float, 'Color map')
     self.new_settable_attr('interpolation', None, str, 'Interpolation method')
     self.new_settable_attr('title', False, bool, 'Whether to show title')
+    self.new_settable_attr('auto_scale', False, bool, 'Whether use auto scale')
+    self.new_settable_attr('histogram', False, bool,
+                           'Whether to show histogram')
 
 
   @staticmethod
@@ -66,6 +69,19 @@ class Retina(Plotter):
       x: np.ndarray = np.abs(np.fft.fftshift(np.fft.fft2(x)))
       if self.get('log'): x: np.ndarray = np.log(x + 1e-10)
 
+    # show title if provided
+    if label is not None and self.get('title'): ax.set_title(label)
+
+    # Do auto-scale if required
+    if self.get('auto_scale'): x = (x - np.mean(x)) / np.std(x)
+
+    # Show histogram if required
+    if self.get('histogram'):
+      x = np.ravel(x)
+      ax.hist(x=x, bins=50)
+      ax.set_axis_on()
+      return
+
     # Show image
     im = ax.imshow(x, cmap=self.get('cmap'), alpha=self.get('alpha'),
                    interpolation=self.get('interpolation'),
@@ -77,11 +93,10 @@ class Retina(Plotter):
       cax = divider.append_axes('right', size='5%', pad=0.05)
       fig.colorbar(im, cax=cax)
 
-    # show title if provided
-    if label is not None and self.get('title'): ax.set_title(label)
-
 
   def register_shortcuts(self):
+    self.register_a_shortcut(
+      'A', lambda: self.flip('auto_scale'), 'Turn on/off auto scale')
     self.register_a_shortcut(
       'T', lambda: self.flip('title'), 'Turn on/off title')
     self.register_a_shortcut(
@@ -91,5 +106,7 @@ class Retina(Plotter):
     self.register_a_shortcut(
       'L', lambda: self.flip('log'),
       'Turn on/off log scale in k-space view')
+    self.register_a_shortcut(
+      'space', lambda: self.flip('histogram'), 'Toggle histogram')
 
 
