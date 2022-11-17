@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==-=======================================================================-===
+import matplotlib as mpl
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,6 +37,7 @@ class Microscope(Plotter):
     self.new_settable_attr('max_size', 1000, int, 'Maximum edge size to plot')
 
     self.new_settable_attr('color_bar', False, bool, 'Color bar')
+    self.new_settable_attr('cmap', None, str, 'Color map')
     self.new_settable_attr('k_space', False, bool, 'Whether to show k-space')
     self.new_settable_attr('hist', False, bool, 'Whether to show histogram')
     self.new_settable_attr('log', False, bool, 'Use log-scale in k-space')
@@ -43,7 +45,9 @@ class Microscope(Plotter):
     self.new_settable_attr('vmax', None, float, 'Max value')
     self.new_settable_attr('vsigma', None, int, 'Sigma coefficient for smart '
                                                 'value clipping')
-    self.new_settable_attr('cmap', None, float, 'Color map')
+    self.new_settable_attr('hist_margin', None, float,
+                           'Value margin to clip, should be in (0, 50)')
+    self.new_settable_attr('cmap', None, str, 'Color map')
     self.new_settable_attr('interpolation', None, str, 'Interpolation method')
     self.new_settable_attr('title', False, bool, 'Whether to show title')
     self.new_settable_attr('mini_map', False, bool, 'Whether to show mini-map')
@@ -120,7 +124,12 @@ class Microscope(Plotter):
   def _show_histogram(self, x: np.ndarray, ax: plt.Axes):
     x = np.ravel(x)
     ax.hist(x=x, bins=50)
+
     ax.set_axis_on()
+
+    # Show margin if provided
+    for v in self._get_hist_margin():
+      ax.plot([v, v], ax.get_ylim(), color='#AAA')
 
   def _show_mini_map(self, li: LargeImage, ax: plt.Axes):
     # Configs
@@ -187,18 +196,27 @@ class Microscope(Plotter):
 
   # region: Private Methods
 
-  def _get_vrange(self):
-    v_min, v_max = None, None
+  def _get_hist_margin(self):
+    margin = self.get('hist_margin')
+    if isinstance(margin, float) and 0 < margin < 50:
+      init_func = lambda: np.percentile(
+        self._current_li.image, (margin, 100 - margin))
+      key = f'{str(self._current_li.image)}-hist-margin-{margin}'
+      return self.get_from_pocket(key, initializer=init_func)
+    return None, None
 
-    # Get mean and sigma if necessary
+  def _get_vrange(self):
+    # (1) Get hist margin if provided
+    v_min, v_max = self._get_hist_margin()
+
+    # (2) Get mean and sigma if necessary (Higher priority)
     vsigma = self.get('vsigma')
     if isinstance(vsigma, int) and vsigma > 0:
       mu, sigma = self.mean_std_of_this_li
-
       # Set v-range
       v_min, v_max = mu - vsigma * sigma, mu + vsigma * sigma
 
-    # `vmin` and `vmax` have highest priority
+    # (3) `vmin` and `vmax` have highest priority
     if self.get('vmin') is not None: v_min = self.get('vmin')
     if self.get('vmax') is not None: v_max = self.get('vmax')
     return v_min, v_max
@@ -261,6 +279,10 @@ class Microscope(Plotter):
       try: self.set(key, float(value))
       except: self.set(key, None)
   sv = set_value
+
+  def set_hist_margin(self, margin):
+    self.set('hist_margin', margin)
+  shm = set_hist_margin
 
   # endregion: Commands
 
