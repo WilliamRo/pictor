@@ -280,7 +280,7 @@ class Microscope(Plotter):
       except: self.set(key, None)
   sv = set_value
 
-  def set_hist_margin(self, margin):
+  def set_hist_margin(self, margin=None):
     self.set('hist_margin', margin)
   shm = set_hist_margin
 
