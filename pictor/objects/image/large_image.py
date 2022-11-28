@@ -83,7 +83,7 @@ class LargeImage(Nomear):
   @classmethod
   def wrap(cls, im: np.ndarray, max_size=None):
     """Wrap an image as LargeImage"""
-    key = str(im)
+    key = im.ctypes.data
     if key not in cls.large_images:
       cls.large_images[key] = LargeImage(im, thumbnail_size=max_size)
     return cls.large_images[key]
