@@ -75,6 +75,10 @@ class DigitalSignal(Nomear):
 
   # region: Special Methods
 
+  def __str__(self):
+    return (f'DigitalSignal(label=`{self.label}`, ' +
+            f'sfreq={self.sfreq}, data.shape={self.data.shape})')
+
   def __getitem__(self, item):
     # Case 1, e.g., ds[10:20]
     if isinstance(item, slice):
