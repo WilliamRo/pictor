@@ -13,10 +13,8 @@
 # limitations under the License.
 # ===-=====================================================================-====
 from roma import Nomear
-from typing import Optional, Union
 
 import numpy as np
-import random
 
 
 
@@ -24,52 +22,53 @@ class DigitalSignal(Nomear):
   """Digital signal(s) organized in a channel-last format
   """
 
-  def __init__(self, sequence: np.ndarray, ticks=None, channel_names=None,
-               label='Blank Label', **kwargs):
-    """Parameters:
-    sequence: np.ndarray, will be reshaped to [L, C] if only one sequence with
-              1-D shape is provided
-    channel_names: if provided, len(channel_names) should be C
-    ticks: if provided, len(ticks) should be equal to len(sequence)
-    label: name of this set of digital signal
-    """
-    # Check sequence, reshape if necessary
-    assert isinstance(sequence, np.ndarray)
-    if len(sequence.shape) == 1: sequence = sequence.reshape([-1, 1])
-    assert len(sequence.shape) == 2
-    # Make sure sequence is in a channel-last format
-    if kwargs.get('length_over_channels', True):
-      assert sequence.shape[0] > sequence.shape[1]
-    # sequences.shape = [<seq_len>, <num_channels>]
-    self.sequence = sequence
+  def __init__(self, data: np.ndarray, sfreq=None, ticks=None,
+               channel_names=None, label='Blank Label', off_set=0., **kwargs):
+    """Multi-channel digital signal stored in a 'channel-last' format.
+    At least one of sampling_frequency and ticks should be provided while
+    instantiating.
 
-    # Set ticks
-    if ticks is None: ticks = range(self.length)
-    ticks = np.array(ticks).ravel()
-    assert len(ticks) == self.length
-    self.ticks = ticks
+    Parameters:
+    :param data: np.ndarray, will be reshaped to [L, C] if only one
+           sequence with 1-D shape is provided
+    :param sfreq: a float number
+    :param channel_names - if provided, len(channel_names) should be C
+    :param ticks: if provided, len(ticks) should be equal to len(sequence)
+    :param off_set: used for calculating ticks if ticks are not provided
+    :param label: name of this set of digital signal
+    """
+    # Check sequence, make sure its shape is [<seq_len>, <num_channels>]
+    self.data = self._check_sequence(data, **kwargs)
+
+    # Set sampling frequency and ticks
+    self.sfreq, self._ticks = self._check_sfreq_and_ticks(sfreq, ticks)
 
     # Set channel_names
-    if channel_names is None:
-      channel_names = [f'Channel-{i+1}' for i in range(self.num_channels)]
-    if isinstance(channel_names, str): channel_names = [channel_names]
-    assert len(channel_names) == self.num_channels
-    self.channels_names = list(channel_names)
+    self.channels_names = self._check_channel_names(channel_names)
 
+    # Set other attributes
+    self.off_set = off_set
     self.label = label
+    self.kwargs = kwargs
 
   # region: Properties
 
-  @property
-  def length(self): return len(self.sequence)
+  @Nomear.property()
+  def ticks(self):
+    if isinstance(self._ticks, np.ndarray): return self._ticks
+    assert isinstance(self.sfreq, float)
+    return np.arange(len(self.data)) / self.sfreq + self.off_set
 
   @property
-  def num_channels(self): return self.sequence.shape[1]
+  def length(self): return len(self.data)
+
+  @property
+  def num_channels(self): return self.data.shape[1]
 
   @Nomear.property()
   def name_tick_data_list(self):
     """Channels should not be added after this property has been called"""
-    return [(name, self.ticks, self.sequence[:, i])
+    return [(name, self.ticks, self.data[:, i])
             for i, name in enumerate(self.channels_names)]
 
   # endregion: Properties
@@ -77,9 +76,20 @@ class DigitalSignal(Nomear):
   # region: Special Methods
 
   def __getitem__(self, item):
+    # Case 1, e.g., ds[10:20]
+    if isinstance(item, slice):
+      start = np.argwhere(self.ticks >= item.start).ravel()[0]
+      stop = np.argwhere(self.ticks < item.stop).ravel()[-1]
+      _ticks = self._ticks
+      if _ticks is not None: _ticks = _ticks[start:stop+1]
+      return DigitalSignal(self.data[start:stop+1], self.sfreq, _ticks,
+                           self.channels_names, self.label,
+                           off_set=self.off_set + start)
+
+    # Case 2, e.g., ds['EEG']
     if item not in self.channels_names:
       raise KeyError(f'!! Channel `{item}` not found')
-    return self.sequence[:, self.channels_names.index(item)]
+    return self.data[:, self.channels_names.index(item)]
 
   # endregion: Special Methods
 
@@ -91,7 +101,7 @@ class DigitalSignal(Nomear):
       sequence = sequence.reshape(shape=[-1, 1])
     assert len(sequence.shape) == 2 and len(sequence) == self.length
     # Add sequence
-    self.sequence = np.concatenate([self.sequence, sequence], axis=-1)
+    self.data = np.concatenate([self.data, sequence], axis=-1)
 
     # Add name
     if name is None: name = f'Channel-{self.length + 1}'
@@ -107,32 +117,51 @@ class DigitalSignal(Nomear):
 
   # endregion: Public Methods
 
-  # region: Static Methods
+  # region: Private Methods
 
   @staticmethod
-  def sinusoidal(x: np.ndarray, omega: Union[float, list] = 1.0,
-                 phi: float = 0.0, noise_db=None, max_truncate_ratio=0.0):
-    assert noise_db is None
+  def _check_sequence(data, **kwargs):
+    assert isinstance(data, np.ndarray)
+    if len(data.shape) == 1: data = data.reshape([-1, 1])
+    assert len(data.shape) == 2
+    # Make sure sequence is in a channel-last format
+    if kwargs.get('length_over_channels', True):
+      assert data.shape[0] > data.shape[1]
+    return data
 
-    if isinstance(omega, (float, int)):
-      # Truncate if permitted
-      if 0 < max_truncate_ratio < 1:
-        min_index = int((1 - max_truncate_ratio) * len(x))
-        x = x[:random.randint(min_index, len(x) + 1)]
-      # TODO: add noise
-      return np.sin(omega * x + phi)
+  def _check_channel_names(self, channel_names):
+    if channel_names is None:
+      return [f'Channel-{i+1}' for i in range(self.data.shape[1])]
+    if isinstance(channel_names, str): channel_names = [channel_names]
+    assert len(channel_names) == self.data.shape[1]
+    return channel_names
 
-    return np.concatenate([DigitalSignal.sinusoidal(
-      x, om, phi, noise_db, max_truncate_ratio) for om in omega])
+  def _check_sfreq_and_ticks(self, sfreq, ticks):
+    if ticks is not None:
+      ticks = np.array(ticks).ravel()
+      if len(ticks) != self.length: raise AssertionError(
+        '!! data length does not match `ticks` length')
+      tick_freq = (ticks[-1] - ticks[0]) / (len(ticks) - 1)
+      if sfreq is None: sfreq = tick_freq
+      elif sfreq != tick_freq: raise AssertionError(
+        '!! `sfreq` does not match provided `ticks`')
+    elif sfreq is None: raise ValueError(
+      '!! At least one of `sfreq` or `ticks` should be provided')
 
-  # endregion: Static Methods
+    return sfreq, ticks
+
+  # endregion: Private Methods
 
 
 
 if __name__ == '__main__':
-  ds = DigitalSignal(np.random.random(size=(50, 3)),
+  ds = DigitalSignal(np.random.random(size=(50, 3)), sfreq=1.0, off_set=1000,
                      channel_names=('A', 'B', 'C'))
+  print(ds.ticks[0])
+  print(ds.ticks.shape)
   print(ds['B'].shape)
+
+  print(ds[1010:1020].length)
 
 
 
