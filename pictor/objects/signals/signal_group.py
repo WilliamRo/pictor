@@ -109,7 +109,7 @@ class Annotation(Nomear):
     """Construct an Annotation
     :param intervals: float or a list of tuples of (start_time, end_time)
     :param annotations: a list or 1D numpy array of integers
-    :param labels:
+    :param labels: a list of strings, e.g., ['W', 'REM', 'N1', 'N2', 'N3']
     """
     # Sanity check
     if isinstance(intervals, (int, float)):
