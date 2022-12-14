@@ -56,7 +56,8 @@ class Monitor(Plotter):
                            'Whether to use smart scale ')
     self.new_settable_attr('xi', 0.1, float, 'Margin for smart scale')
     self.new_settable_attr('hl', 0, int, 'Highlighted channel id')
-    self.new_settable_attr('annotation', None, str, 'Annotation key')
+    self.new_settable_attr('anno_legend', None, bool,
+                           'Option to show legends of annotations')
 
   # region: Properties
 
@@ -190,13 +191,15 @@ class Monitor(Plotter):
     ax.set_title(s.label + tail)
 
   def _plot_annotation(self, ax: plt.Axes, s: Scrolling):
-    axes_dict = {}
+    axes_dict, kwargs = {}, {}
+    legend_handles = []
 
-    for anno_str in self._annotations_to_show:
+    for i, anno_str in enumerate(self._annotations_to_show):
       anno_config = Arguments.parse(anno_str)
       key: str = anno_config.func_name
       if key.lower() in ('sleep_stage', 'stage'):
         plot_method = self._plot_stage
+        kwargs['index'] = i
       else: raise KeyError(f'!! Unknown annotation key `{key}`')
 
       # Try to fetch package
@@ -204,18 +207,28 @@ class Monitor(Plotter):
       package = s.get_annotation(anno_str, start_time, end_time)
       if package is None: continue
 
-      axes_dict[key] = plot_method(
-        ax, axes_dict.get(key, None), package, anno_config)
+      # Get results
+      right_ax, line = plot_method(
+        ax, axes_dict.get(key, None), package, anno_config, **kwargs)
+      axes_dict[key] = right_ax
+      # Set label to line
+      label = anno_config.arg_list[0]
+      line.set_label(label)
+      legend_handles.append(line)
+
+    # Show legend if necessary
+    if len(legend_handles) > 1 or self.get('anno_legend'):
+      ax.legend(handles=legend_handles)
 
   def _plot_stage(self, left_ax: plt.Axes, right_ax: plt.Axes,
-                  package, config: Arguments):
+                  package, config: Arguments, index):
     ticks, values, labels = package
 
     # Determine color
     color = config.arg_dict.get('color', None)
     if color is None:
-      # TODO
-      color = '#4281f5'
+      colors = ['#4281f5', '#FF0000', '#FAC205', '#15B01A', '#000000']
+      color = colors[index % len(colors)]
 
     # Determine other plot settings
     duration  = self._selected_signal.window_duration
@@ -232,8 +245,8 @@ class Monitor(Plotter):
     if should_init_right_ax: right_ax = left_ax.twinx()
 
     # Plot
-    right_ax.plot(ticks, values, color=color, zorder=999, alpha=alpha,
-                  linewidth=width)
+    line, = right_ax.plot(
+      ticks, values, color=color, zorder=999, alpha=alpha, linewidth=width)
 
     # Set right axes if necessary
     if should_init_right_ax:
@@ -246,7 +259,7 @@ class Monitor(Plotter):
 
       right_ax.invert_yaxis()
 
-    return right_ax
+    return right_ax, line
 
 
   def _plot_stage_(self, ax: plt.Axes, s: Scrolling):
@@ -307,8 +320,10 @@ class Monitor(Plotter):
     ds = ss.dominate_signal
     self.goto_position((time - ds.ticks[0]) / ss.total_duration)
 
-  def toggle_annotation(self, anno_key: str = 'stage Ground-Truth'):
+  def toggle_annotation(self, anno_type: str = 'stage',
+                        anno_label: str = 'Ground-Truth'):
     """Show or hide specified annotations. """
+    anno_key = f'{anno_type} {anno_label}'
     if anno_key in self._annotations_to_show:
       self._annotations_to_show.remove(anno_key)
     else: self._annotations_to_show.append(anno_key)
