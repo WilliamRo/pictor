@@ -16,6 +16,8 @@ from typing import Optional, List
 from .plotter_base import Plotter
 from pictor.objects.signals import SignalGroup
 from pictor.objects.signals.scrolling import Scrolling
+from roma import console
+from roma.spqr.arguments import Arguments
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -38,6 +40,8 @@ class Monitor(Plotter):
     # Specific attributes
     self.scroll_buffer = {}
     self._selected_signal: Optional[Scrolling] = None
+
+    self._annotations_to_show = []
 
     # Settable attributes
     self.new_settable_attr('default_win_duration', window_duration,
@@ -186,6 +190,66 @@ class Monitor(Plotter):
     ax.set_title(s.label + tail)
 
   def _plot_annotation(self, ax: plt.Axes, s: Scrolling):
+    axes_dict = {}
+
+    for anno_str in self._annotations_to_show:
+      anno_config = Arguments.parse(anno_str)
+      key: str = anno_config.func_name
+      if key.lower() in ('sleep_stage', 'stage'):
+        plot_method = self._plot_stage
+      else: raise KeyError(f'!! Unknown annotation key `{key}`')
+
+      # Try to fetch package
+      start_time, end_time = ax.get_xlim()
+      package = s.get_annotation(anno_str, start_time, end_time)
+      if package is None: continue
+
+      axes_dict[key] = plot_method(
+        ax, axes_dict.get(key, None), package, anno_config)
+
+  def _plot_stage(self, left_ax: plt.Axes, right_ax: plt.Axes,
+                  package, config: Arguments):
+    ticks, values, labels = package
+
+    # Determine color
+    color = config.arg_dict.get('color', None)
+    if color is None:
+      # TODO
+      color = '#4281f5'
+
+    # Determine other plot settings
+    duration  = self._selected_signal.window_duration
+    if duration < 1000: width = 16
+    elif duration < 2000: width = 8
+    elif duration < 4000: width = 4
+    else: width = 2
+
+    if duration < 2000: alpha = 0.3
+    else: alpha = 0.6
+
+    # Get right axes
+    should_init_right_ax = right_ax is None
+    if should_init_right_ax: right_ax = left_ax.twinx()
+
+    # Plot
+    right_ax.plot(ticks, values, color=color, zorder=999, alpha=alpha,
+                  linewidth=width)
+
+    # Set right axes if necessary
+    if should_init_right_ax:
+      right_ax.tick_params(axis='y', labelcolor=color)
+      right_ax.set_yticks(np.arange(len(labels)))
+      right_ax.set_yticklabels(labels)
+
+      margin = 0.2
+      right_ax.set_ylim(-margin, len(labels) - 1 + margin)
+
+      right_ax.invert_yaxis()
+
+    return right_ax
+
+
+  def _plot_stage_(self, ax: plt.Axes, s: Scrolling):
     # Get annotation
     start_time, end_time = ax.get_xlim()
     package = s.get_annotation(self.get('annotation'), start_time, end_time)
@@ -205,7 +269,8 @@ class Monitor(Plotter):
     if duration < 2000: alpha = 0.3
     else: alpha = 0.6
 
-    ax.plot(ticks, values, color=color, zorder=999, alpha=alpha, linewidth=width)
+    ax.plot(ticks, values, color=color, zorder=999, alpha=alpha,
+            linewidth=width)
 
     # Customize y-axis
     ax.tick_params(axis='y', labelcolor=color)
@@ -241,6 +306,20 @@ class Monitor(Plotter):
     ss = self._selected_signal
     ds = ss.dominate_signal
     self.goto_position((time - ds.ticks[0]) / ss.total_duration)
+
+  def toggle_annotation(self, anno_key: str = 'stage Ground-Truth'):
+    """Show or hide specified annotations. """
+    if anno_key in self._annotations_to_show:
+      self._annotations_to_show.remove(anno_key)
+    else: self._annotations_to_show.append(anno_key)
+
+    # List all annotations to be displayed
+    console.show_info('Annotations to show:')
+    for i, key in enumerate(self._annotations_to_show):
+      console.supplement(f'[{i+1}] {key}', level=2)
+
+    self.refresh()
+  ta = toggle_annotation
 
   def anit(self, fps: float, time_interval: str = None, step: int = None,
            fmt: str = 'gif', path: str = None, n_tail: int = 0):
