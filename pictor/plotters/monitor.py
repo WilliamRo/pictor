@@ -396,19 +396,23 @@ class Monitor(Plotter):
   # region: Commands and Shortcuts
 
   def move_window(self, direction=1, go_extreme=False):
+    if self._selected_signal is None: return
     self._selected_signal.move_window(direction * self.get('step'), go_extreme)
     self.refresh()
 
   def goto_position(self, position: int):
+    if self._selected_signal is None: return
     self._selected_signal.start_position = position
     self.refresh()
 
   def set_win_size(self, multiplier: int):
+    if self._selected_signal is None: return
     self._selected_signal.set_window_size(multiplier)
     self.refresh()
 
   def set_win_duration(self, duration: float):
     """Set window duration (in secs)."""
+    if self._selected_signal is None: return
     assert duration > 0
     self._selected_signal.set_window_duration(duration)
     self.refresh()

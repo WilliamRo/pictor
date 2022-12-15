@@ -56,7 +56,7 @@ class DigitalSignal(Nomear):
   @Nomear.property()
   def ticks(self):
     if isinstance(self._ticks, np.ndarray): return self._ticks
-    assert isinstance(self.sfreq, float)
+    assert isinstance(self.sfreq, (int, float))
     return np.arange(len(self.data)) / self.sfreq + self.off_set
 
   @property
