@@ -218,7 +218,7 @@ class Monitor(Plotter):
 
     # Show legend if necessary
     if len(legend_handles) > 1 or self.get('anno_legend'):
-      ax.legend(handles=legend_handles)
+      ax.legend(handles=legend_handles, framealpha=0.8).set_zorder(99)
 
   def _plot_stage(self, left_ax: plt.Axes, right_ax: plt.Axes,
                   package, config: Arguments, index):
@@ -321,8 +321,11 @@ class Monitor(Plotter):
     self.goto_position((time - ds.ticks[0]) / ss.total_duration)
 
   def toggle_annotation(self, anno_type: str = 'stage',
-                        anno_label: str = 'Ground-Truth'):
-    """Show or hide specified annotations. """
+                        anno_label: str = 'Ground-Truth',
+                        auto_refresh=True):
+    """Show or hide specified annotations. Note that 'stage Ground-Truth' is
+    the default annotation key of ground-truth stage labels in SignalGroups.
+    """
     anno_key = f'{anno_type} {anno_label}'
     if anno_key in self._annotations_to_show:
       self._annotations_to_show.remove(anno_key)
@@ -333,7 +336,8 @@ class Monitor(Plotter):
     for i, key in enumerate(self._annotations_to_show):
       console.supplement(f'[{i+1}] {key}', level=2)
 
-    self.refresh()
+    # Refresh if required
+    if auto_refresh: self.refresh()
   ta = toggle_annotation
 
   def anit(self, fps: float, time_interval: str = None, step: int = None,
