@@ -105,7 +105,8 @@ class Plotter(Nomear):
 
   # region: Builtin Plotters
 
-  def show_text(self, text, ax: plt.Axes = None,  fig: plt.Figure = None):
+  @staticmethod
+  def show_text(text, ax: plt.Axes = None,  fig: plt.Figure = None):
     # Get axis
     if ax is None:
       if fig is None: fig = plt.gcf()

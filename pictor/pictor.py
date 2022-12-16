@@ -18,6 +18,7 @@ from .plugins.database import Database
 from .plugins.studio import Studio
 
 from roma import Easel
+from roma import Nomear
 from typing import Callable
 
 import tkinter as tk
@@ -55,6 +56,7 @@ class Pictor(Easel, Database, Studio):
 
     # TODO: beta
     self.on_command_text_changed = self.default_on_command_text_changed
+    self.busy_plotter = None
 
   # region: Properties
 
@@ -79,6 +81,7 @@ class Pictor(Easel, Database, Studio):
 
   @property
   def active_plotter(self) -> Plotter:
+    if self.busy_plotter is not None: return self.busy_plotter
     plotter = self.get_element(self.Keys.PLOTTERS)
     if plotter is None: return self.canvas.default_plotter
     return plotter
@@ -166,6 +169,9 @@ class Pictor(Easel, Database, Studio):
     self.put_into_pocket(self.Keys.ALLOW_MAIN_THREAD_REFRESH,
                          val, exclusive=False)
 
+  def busy(self, message: str, auto_refresh=True):
+    return BusyIndicator(self, message, auto_refresh)
+
   # endregion: Public Methods
 
   # region: Commands
@@ -202,3 +208,24 @@ class Pictor(Easel, Database, Studio):
     return p
 
   # endregion: Presets
+
+
+
+class BusyIndicator(Nomear):
+
+  def __init__(self, pictor: Pictor, message, auto_refresh=True):
+    self.pictor: Pictor = pictor
+    self.message = message
+    self.auto_refresh = auto_refresh
+
+  def show_busy_message(self, ax, fig):
+    Plotter.show_text(self.message, ax, fig)
+
+  def __enter__(self):
+    self.pictor.busy_plotter = Plotter(self.show_busy_message,
+                                       pictor=self.pictor)
+    if self.auto_refresh: self.pictor.refresh()
+
+  def __exit__(self, *args):
+    self.pictor.busy_plotter = None
+    if self.auto_refresh: self.pictor.refresh()

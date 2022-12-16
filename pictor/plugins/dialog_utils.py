@@ -11,8 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ======-=========================================================-=============
-from .database import Database
-from .dialog_utils import DialogUtilities
-from .studio import Studio
-from .timer import Timer
+# ====-======================================================================-==
+"""This module provides file-exploring functions for Pictor APPs"""
+
+
+
+
+class DialogUtilities(object):
+
+  @staticmethod
+  def load_file_dialog(title):
+    from tkinter.filedialog import askopenfilename
+    return askopenfilename(title=title)
