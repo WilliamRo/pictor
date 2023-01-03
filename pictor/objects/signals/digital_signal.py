@@ -82,13 +82,20 @@ class DigitalSignal(Nomear):
   def __getitem__(self, item):
     # Case 1, e.g., ds[10:20]
     if isinstance(item, slice):
-      start = np.argwhere(self.ticks >= item.start).ravel()[0]
-      stop = np.argwhere(self.ticks < item.stop).ravel()[-1]
-      _ticks = self._ticks
-      if _ticks is not None: _ticks = _ticks[start:stop+1]
-      return DigitalSignal(self.data[start:stop+1], self.sfreq, _ticks,
-                           self.channels_names, self.label,
-                           off_set=self.off_set + start)
+      start_time = self.ticks[0] if item.start is None else item.start
+      end_time = self.ticks[-1] if item.stop is None else item.stop
+      start_index = np.argwhere(self.ticks >= start_time).ravel()[0]
+      stop_index = np.argwhere(self.ticks < end_time).ravel()[-1]
+
+      if self._ticks is not None:
+        _ticks = self._ticks[start_index:stop_index+1]
+        off_set = 0.
+      else:
+        _ticks = self._ticks
+        off_set = self.ticks[start_index]
+      return DigitalSignal(
+        self.data[start_index:stop_index+1], self.sfreq, _ticks,
+        self.channels_names, self.label, off_set=off_set)
 
     # Case 2, e.g., ds['EEG']
     if item not in self.channels_names:

@@ -79,6 +79,15 @@ class SignalGroup(Nomear):
 
   # region: Special Methods
 
+  def truncate(self, start_time=0, end_time=-1):
+    """Truncate signal from `start_time` to `end_time`"""
+    # Truncate digital signals
+    self.digital_signals = [
+      ds[start_time:end_time] for ds in self.digital_signals]
+    # Truncate annotations
+    self.annotations = {k: a.truncate(start_time, end_time)
+                        for k, a in self.annotations.items()}
+
   def __getitem__(self, item):
     if item not in self.channel_signal_dict:
       raise KeyError(f'!! Signal label `{item}` not found')
@@ -137,6 +146,17 @@ class Annotation(Nomear):
       ticks.extend(list(inter))
       values.extend([anno] * 2)
     return np.array(ticks), np.array(values)
+
+  def truncate(self, start_time, end_time):
+    assert start_time < end_time
+
+    inter, anno = [], []
+    for i, interval in enumerate(self.intervals):
+      if interval[0] >= end_time or interval[1] <= start_time: continue
+      inter.append((max(interval[0], start_time), min(interval[1], end_time)))
+      anno.append(self.annotations[i])
+
+    return Annotation(inter, anno, labels=self.labels)
 
   def get_ticks_values_for_plot(self, start_time, end_time):
     # Sanity check
