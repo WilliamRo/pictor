@@ -126,6 +126,23 @@ class DigitalSignal(Nomear):
                            local=True)
     return self.get_from_pocket(key)
 
+  @staticmethod
+  def preprocess_iqr(x: np.ndarray, iqr=1, median=0, max_abs_deviation=20):
+    """Rescale data (shape=[L, C]) TODO: tooooooo slow"""
+    assert median == 0
+
+    # Subtract median from each element
+    x = x - np.median(x, axis=0)
+    current_iqr = np.percentile(x, 75, axis=0) - np.percentile(x, 25, axis=0)
+    x = x / current_iqr * iqr
+
+    # Clip outliers if necessary
+    if max_abs_deviation is not None and max_abs_deviation > 0:
+      M = max_abs_deviation * iqr
+      x = np.clip(x, -M, M)
+
+    return x
+
   # endregion: Public Methods
 
   # region: Private Methods
