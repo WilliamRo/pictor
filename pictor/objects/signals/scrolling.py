@@ -78,7 +78,7 @@ class Scrolling(SignalGroup):
     for name, x, y in name_tick_data_list:
       assert len(x) == len(y)
       start_i = int(len(x) * self.start_position)  # (1)
-      end_i = start_i + int(self.window_size * len(x))
+      end_i = start_i + int(self.window_size * len(x)) + 1
 
       # Apply max_ticks option if given
       if isinstance(max_ticks, int) and 0 < max_ticks < end_i - start_i:

@@ -171,8 +171,10 @@ class Monitor(Plotter):
       if 0 < hl_id != i + 1: color, zorder = '#AAA', None
       ax.plot(x, y, color=color, linewidth=1, zorder=zorder)
 
-      # Set xlim
-      if i == 0: ax.set_xlim(x[0], x[-1])
+    # Set xlim (make sure display interval \in data interval)
+    tick_list = [x for _, x, _ in channels]
+    ax.set_xlim(max([x[0] for x in tick_list]),
+                min([x[-1] for x in tick_list]))
 
     # Set y_ticks
     ax.set_yticks([N - i - 0.5 for i in range(N)])

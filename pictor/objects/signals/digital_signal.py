@@ -91,7 +91,7 @@ class DigitalSignal(Nomear):
         _ticks = self._ticks[start_index:stop_index+1]
         off_set = 0.
       else:
-        _ticks = self._ticks
+        _ticks = None
         off_set = self.ticks[start_index]
       return DigitalSignal(
         self.data[start_index:stop_index+1], self.sfreq, _ticks,
@@ -169,9 +169,9 @@ class DigitalSignal(Nomear):
       ticks = np.array(ticks).ravel()
       if len(ticks) != self.length: raise AssertionError(
         '!! data length does not match `ticks` length')
-      tick_freq = (ticks[-1] - ticks[0]) / (len(ticks) - 1)
+      tick_freq = (len(ticks) - 1) / (ticks[-1] - ticks[0])
       if sfreq is None: sfreq = tick_freq
-      elif sfreq != tick_freq: raise AssertionError(
+      elif abs(sfreq - tick_freq) > 1e-6: raise AssertionError(
         '!! `sfreq` does not match provided `ticks`')
     elif sfreq is None: raise ValueError(
       '!! At least one of `sfreq` or `ticks` should be provided')
