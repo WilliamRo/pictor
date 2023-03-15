@@ -220,7 +220,7 @@ class Monitor(Plotter):
 
     # Show legend if necessary
     if len(legend_handles) > 1 or self.get('anno_legend'):
-      ax.legend(handles=legend_handles, framealpha=0.8).set_zorder(99)
+      ax.legend(handles=legend_handles, framealpha=1.0).set_zorder(99)
 
   def _plot_stage(self, left_ax: plt.Axes, right_ax: plt.Axes,
                   package, config: Arguments, index):
