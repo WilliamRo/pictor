@@ -120,7 +120,7 @@ class Plotter(Nomear):
 
   # region: Commands
 
-  def set(self, key, value=None, auto_refresh=True):
+  def set(self, key, value=None, auto_refresh=True, verbose=True):
     if key == '??':
       # TODO: show a table of all settable attributes
       console.show_info(f'All settable attributes of `{self.class_name}`:')
@@ -138,7 +138,7 @@ class Plotter(Nomear):
     else: value = _type(value)
     self.settable_attributes[key][0] = value
 
-    console.show_status(f'{self.class_name}.{key} set to {value}')
+    if verbose: console.show_status(f'{self.class_name}.{key} set to {value}')
 
     # Refresh canvas
     if auto_refresh: self.refresh()
@@ -188,3 +188,19 @@ class Plotter(Nomear):
     self.func(**kwargs)
 
   # endregion: Special Functions
+
+  # region: Public Mehtods
+
+  @classmethod
+  def plot(cls, objects: list, title=None, fig_size=(5, 5), show=True,
+           **kwargs):
+    from pictor import Pictor
+    if title is None: title = cls.__name__
+    p = Pictor(title=title, figure_size=fig_size)
+    plotter = p.add_plotter(cls(pictor=p))
+    for k, v in kwargs.items(): plotter.set('k', v)
+    p.objects = objects
+    if show: p.show()
+    return p
+
+  # endregion: Public Mehtods

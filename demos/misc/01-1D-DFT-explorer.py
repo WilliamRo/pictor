@@ -13,75 +13,37 @@
 # limitations under the License.
 # ======-=======================================================-===============
 """References: https://download.ni.com/evaluation/pxi/Understanding%20FFTs%20and%20Windowing.pdf"""
-import matplotlib.pyplot as plt
 import numpy as np
 
-from pictor import Pictor
-from pictor.plotters.plotter_base import Plotter
+from pictor.plotters import SignalViewer
 
 
 
-# Sampling frequency
-fs = 100.0
-# Time interval [0, T]
-T = 2
-# Generate ticks
-t = np.arange(T * fs + 1) / fs
+p = SignalViewer.plot([], fig_size=(9, 6), show=False)
+sv: SignalViewer = p.plotters[0]
+sv.new_settable_attr('fs', 500.0, float, 'Sampling frequency')
+sv.new_settable_attr('T', 2.0, float, 'Sampling time')
+sv.new_settable_attr('phi', 0.0, float, 'Delay')
+sv.new_settable_attr('phi_step', 0.001, float, 'Step for changing delay')
+sv.new_settable_attr('omega', 5.0, float, 'Angular frequency')
 
-signals = []
-# Signal 1
-period = 1
-w = 2 * np.pi / period
-s1 = np.sin(w * t)
-signals.append(s1)
+sv.set('slim', '-40, 60', False, verbose=False)
+sv.set('max_freq', 30, False, verbose=False)
 
-# Signal 2
-s2 = np.sin(w * (t + 0.7))
-signals.append(s2)
+def change_phi(d=1.0):
+  phi, step = sv.get('phi'), sv.get('phi_step')
+  sv.set('phi', phi + d * step, verbose=False)
 
-def plot_time(x: np.ndarray, ax: plt.Axes):
-  # Plot signal
-  ax.plot(t, x)
+sv.register_a_shortcut('n', lambda: change_phi(1), 'Increase phi')
+sv.register_a_shortcut('p', lambda: change_phi(-1), 'Decrease phi')
 
-  # Set styles
-  ax.set_xlim(0, T)
-  ax.set_xlabel('Time')
+def sig_gen(_sv: SignalViewer):
+  fs, T, phi, omega = [_sv.get(k) for k in ('fs', 'T', 'phi', 'omega')]
+  t = np.arange(T * fs + 1) / fs
+  x = np.sin(2 * np.pi * omega * (t + phi))
+  sign = '+' if phi >= 0 else ''
+  _sv.pictor.title_suffix = f'y = sin(2*pi*{omega:.1f}*(t{sign}{phi:.3f}))'
+  return x, t
 
-def plot_frequency(self, x: np.ndarray, ax: plt.Axes):
-  # Get frequency ticks
-  freq = np.fft.fftshift(np.fft.fftfreq(len(x), 1 / fs))
-
-  # Perform 1D DFT
-  X = np.fft.fftshift(np.fft.fft(x))
-
-  # Plot spectrum
-  ref = 1
-  ax.plot(freq, 20 * np.log10(np.abs(X) / ref))
-
-  # Set styles
-  ax.set_xlim(0, freq[-1])
-
-  ymin, ymax = self.get('ymin'), self.get('ymax')
-  ax.set_ylim(ymin, ymax)
-  ax.set_xlabel('Frequency (Hz)')
-  ax.set_ylabel('Decibels')
-
-# Visualize signal using Pictor
-p = Pictor(title='1D-DFT Explorer', figure_size=(8, 4))
-p.objects = signals
-p.add_plotter(plot_time)
-
-pf = Plotter(plot_frequency)
-pf.func = lambda x, ax: plot_frequency(pf, x, ax)
-pf.new_settable_attr('ymin', None, float, 'Minimum dB to display')
-pf.new_settable_attr('ymax', None, float, 'Maximum dB to display')
-p.add_plotter(pf)
-
+p.objects = [sig_gen]
 p.show()
-
-
-
-
-
-
-

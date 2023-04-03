@@ -17,3 +17,4 @@ from .oscilloscope import Oscilloscope
 from .plotter_base import Plotter
 from .prompter import Prompter
 from .retina import Retina
+from .signal_viewer import SignalViewer
