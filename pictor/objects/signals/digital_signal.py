@@ -180,6 +180,22 @@ class DigitalSignal(Nomear):
 
   # endregion: Private Methods
 
+  # region: Operations
+
+  # region: STFT
+
+  @staticmethod
+  def stft():
+    """Performs Short-Time Fourier Transformation on signal.
+
+    Reference: https://kevinsprojects.wordpress.com/2014/12/13/short-time-fourier-transform-using-python-and-numpy/    :return:
+    """
+    pass
+
+  # endregion: STFT
+
+  # endregion: Operations
+
 
 
 if __name__ == '__main__':
