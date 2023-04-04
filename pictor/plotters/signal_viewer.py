@@ -28,6 +28,7 @@ class SignalViewer(Plotter):
     # Settable attributes
     self.new_settable_attr('slim', ',', str, 'Spectrum limit')
     self.new_settable_attr('max_freq', None, float, 'Maximum frequency')
+    self.new_settable_attr('grid', True, bool, 'Option of showing grid')
 
   # region: Properties
 
@@ -74,14 +75,16 @@ class SignalViewer(Plotter):
     ax1.set_xlabel('Time')
     ax1.set_title(f'fs = {fs}')
 
+    ax1.grid(self.get('grid'))
+
     # (2) Plot spectrum
     # Perform 1D-DFT
     freq = np.fft.fftshift(np.fft.fftfreq(len(x), 1 / fs))
     X = np.fft.fftshift(np.fft.fft(x))
 
     ax2: plt.Axes = fig.add_subplot(212)
-    ref = 1
-    ax2.plot(freq, 20 * np.log10(np.abs(X) / ref))
+    abs_X = np.abs(X)
+    ax2.plot(freq, 20 * np.log10(abs_X / np.max(abs_X)))
 
     # Set styles
     max_freq = self.get('max_freq')
@@ -90,6 +93,8 @@ class SignalViewer(Plotter):
     ax2.set_ylim(*self.spectrum_lim)
     ax2.set_xlabel('Frequency (Hz)')
     ax2.set_ylabel('Decibels')
+
+    ax2.grid(self.get('grid'))
 
   # endregion: Plotting Method
 
