@@ -192,14 +192,15 @@ class Plotter(Nomear):
   # region: Public Mehtods
 
   @classmethod
-  def plot(cls, objects: list, title=None, fig_size=(5, 5), show=True,
-           **kwargs):
+  def plot(cls, objects: list, labels=None, title=None, fig_size=(5, 5),
+           show=True, **kwargs):
     from pictor import Pictor
     if title is None: title = cls.__name__
     p = Pictor(title=title, figure_size=fig_size)
     plotter = p.add_plotter(cls(pictor=p))
     for k, v in kwargs.items(): plotter.set('k', v)
     p.objects = objects
+    if labels is not None: p.labels = labels
     if show: p.show()
     return p
 
