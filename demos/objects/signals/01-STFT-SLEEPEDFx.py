@@ -37,13 +37,19 @@ sg.truncate(30600, 31400)
 sg.digital_signals.pop(-1)
 
 s = sg.digital_signals[0].data[:, 0]
+fs = sg.digital_signals[0].sfreq
+print(f's.shape = {s.shape}')
+print(f'sfreq = {fs}')
 
 # (3) Perform STFT
 from scipy.signal import stft
-f, t, Zxx = stft(s, fs=sg.digital_signals[0].sfreq)
+f, t, Zxx = stft(s, fs=fs, nperseg=256)
 
 import matplotlib.pyplot as plt
-plt.imshow(np.abs(Zxx))
+plt.pcolormesh(t / fs, f, np.abs(Zxx), vmin=0, shading='gouraud')
+plt.title('STFT Magnitude')
+plt.ylabel('Frequency [Hz]')
+plt.xlabel('Time [sec]')
 plt.show()
 
 # (optional) Visualize signal
