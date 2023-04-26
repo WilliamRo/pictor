@@ -41,7 +41,7 @@ class ParticleSystem(Nomear):
 
   # region: Public Methods
 
-  def register_var(self, k, shape, init_value=None, dtype=np.float,
+  def register_var(self, k, shape, init_value=None, dtype=float,
                    is_global_var=False,):
     """Initialize a variable.
 
