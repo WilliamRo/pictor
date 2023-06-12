@@ -114,26 +114,34 @@ class SignalGroup(Nomear):
 
 class Annotation(Nomear):
 
-  def __init__(self, intervals, annotations, labels):
+  def __init__(self, intervals, annotations=None, labels=None):
     """Construct an Annotation
     :param intervals: float or a list of tuples of (start_time, end_time)
-    :param annotations: a list or 1D numpy array of integers
-    :param labels: a list of strings, e.g., ['W', 'REM', 'N1', 'N2', 'N3']
+    :param annotations: if provided, should be a list or 1D numpy array of
+                        integers
+    :param labels: if provided, should be a list of strings,
+                   e.g., ['W', 'REM', 'N1', 'N2', 'N3'] or a string
     """
     # Sanity check
     if isinstance(intervals, (int, float)):
-      assert intervals > 0
+      assert intervals > 0 and annotations is not None
       intervals = [(i * intervals, (i + 1) * intervals)
                    for i, _ in enumerate(annotations)]
-    assert len(intervals) == len(annotations)
-    assert max(annotations) <= len(labels) - 1
+
+    if annotations is not None:
+      assert len(intervals) == len(annotations)
+    # assert max(annotations) <= len(labels) - 1
 
     self.intervals = intervals
     self.annotations = annotations
     self.labels = labels
 
+  @property
+  def is_for_events(self): return self.annotations is None
+
   @Nomear.property()
   def labels_seen(self):
+    if self.is_for_events: return None
     return self.labels[:max(self.annotations) + 1]
 
   @Nomear.property()
@@ -150,15 +158,16 @@ class Annotation(Nomear):
   def truncate(self, start_time, end_time):
     assert start_time < end_time
 
-    inter, anno = [], []
+    inter, anno = [], (None if self.is_for_events else [])
     for i, interval in enumerate(self.intervals):
       if interval[0] >= end_time or interval[1] <= start_time: continue
       inter.append((max(interval[0], start_time), min(interval[1], end_time)))
-      anno.append(self.annotations[i])
+      if not self.is_for_events: anno.append(self.annotations[i])
 
     return Annotation(inter, anno, labels=self.labels)
 
   def get_ticks_values_for_plot(self, start_time, end_time):
+    """This method is for stage annotation only"""
     # Sanity check
     assert start_time < end_time
     ticks, values = self.curve
@@ -172,6 +181,3 @@ class Annotation(Nomear):
     if end_i <= start_i: end_i = len(ticks)
 
     return ticks[start_i:end_i+1], values[start_i:end_i+1]
-
-    # Find start index
-

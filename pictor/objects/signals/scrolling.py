@@ -90,6 +90,9 @@ class Scrolling(SignalGroup):
   def get_annotation(self, key, start_time, end_time):
     if key not in self.annotations: return None
     anno: Annotation = self.annotations[key]
+
+    if anno.is_for_events: return anno.truncate(start_time, end_time)
+
     ticks, values = anno.get_ticks_values_for_plot(start_time, end_time)
     # ticks, values = anno.curve
     return ticks, values, anno.labels_seen

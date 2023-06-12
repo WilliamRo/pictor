@@ -331,7 +331,12 @@ class Monitor(Plotter):
     anno_key = f'{anno_type} {anno_label}'
     if anno_key in self._annotations_to_show:
       self._annotations_to_show.remove(anno_key)
-    else: self._annotations_to_show.append(anno_key)
+    else:
+      # Check anno_key before appending
+      if anno_key not in self._selected_signal.annotations:
+        raise KeyError(f'!! `{anno_key}` not found in Annotations')
+
+      self._annotations_to_show.append(anno_key)
 
     # List all annotations to be displayed
     console.show_info('Annotations to show:')
