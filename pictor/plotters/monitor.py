@@ -96,15 +96,24 @@ class Monitor(Plotter):
     super(Monitor, self).register_to_master(pictor)
 
     # Set channel hints
-    def get_hints(for_add_channels=False):
+    def get_channel_hints(for_add_channels=False):
       hints = ['Channel list', '-' * 12]
       channels = self.hidden_channels if for_add_channels else self.channel_list
       hints += [f'[{i+1}] {name}' for i, name in enumerate(channels)]
       return '\n'.join(hints)
-    self.pictor.command_hints['sc'] = get_hints
-    self.pictor.command_hints['set_channels'] = get_hints
-    self.pictor.command_hints['ac'] = lambda: get_hints(True)
-    self.pictor.command_hints['add_channels'] = lambda: get_hints(True)
+    self.pictor.command_hints['sc'] = get_channel_hints
+    self.pictor.command_hints['set_channels'] = get_channel_hints
+    self.pictor.command_hints['ac'] = lambda: get_channel_hints(True)
+    self.pictor.command_hints['add_channels'] = lambda: get_channel_hints(True)
+
+    # Set annotation hints
+    def get_anno_hints():
+      hints = ['Annotations', '-' * 11]
+      hints += [f'[{i+1}] {k}'
+                for i, k in enumerate(self._selected_signal.annotations.keys())]
+      return '\n'.join(hints)
+    self.pictor.command_hints['ta'] = get_anno_hints
+    self.pictor.command_hints['toggle_annotation'] = get_anno_hints
 
   def show_curves(self, x: np.ndarray, fig: plt.Figure, i: int):
     # Clear figure
@@ -328,15 +337,22 @@ class Monitor(Plotter):
     """Show or hide specified annotations. Note that 'stage Ground-Truth' is
     the default annotation key of ground-truth stage labels in SignalGroups.
     """
-    anno_key = f'{anno_type} {anno_label}'
-    if anno_key in self._annotations_to_show:
-      self._annotations_to_show.remove(anno_key)
+    # Consider auto hints selection
+    if anno_type[0].isdigit():
+      indices = [int(n) - 1 for n in anno_type.split(',')]
+      all_anno_keys = list(self._selected_signal.annotations.keys())
+      anno_keys = [all_anno_keys[i] for i in indices]
+      self._annotations_to_show = anno_keys
     else:
-      # Check anno_key before appending
-      if anno_key not in self._selected_signal.annotations:
-        raise KeyError(f'!! `{anno_key}` not found in Annotations')
+      anno_key = f'{anno_type} {anno_label}'
+      if anno_key in self._annotations_to_show:
+        self._annotations_to_show.remove(anno_key)
+      else:
+        # Check anno_key before appending
+        if anno_key not in self._selected_signal.annotations:
+          raise KeyError(f'!! `{anno_key}` not found in Annotations')
 
-      self._annotations_to_show.append(anno_key)
+        self._annotations_to_show.append(anno_key)
 
     # List all annotations to be displayed
     console.show_info('Annotations to show:')
