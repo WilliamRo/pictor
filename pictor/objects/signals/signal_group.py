@@ -79,14 +79,22 @@ class SignalGroup(Nomear):
 
   # region: Special Methods
 
-  def truncate(self, start_time=0, end_time=-1):
+  def truncate(self, start_time=0, end_time=-1, return_new_sg=False):
     """Truncate signal from `start_time` to `end_time`"""
     # Truncate digital signals
-    self.digital_signals = [
+    digital_signals = [
       ds[start_time:end_time] for ds in self.digital_signals]
     # Truncate annotations
-    self.annotations = {k: a.truncate(start_time, end_time)
-                        for k, a in self.annotations.items()}
+    annotations = {k: a.truncate(start_time, end_time)
+                   for k, a in self.annotations.items()}
+
+    if return_new_sg:
+      sg = SignalGroup(digital_signals, self.label, **self.properties)
+      sg.annotations = annotations
+      return sg
+    else:
+      self.digital_signals = digital_signals
+      self.annotations = annotations
 
   def __getitem__(self, item):
     if item not in self.channel_signal_dict:
