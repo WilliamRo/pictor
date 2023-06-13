@@ -333,12 +333,14 @@ class Monitor(Plotter):
 
   def toggle_annotation(self, anno_type: str = 'stage',
                         anno_label: str = 'Ground-Truth',
-                        auto_refresh=True):
+                        force_on=False, auto_refresh=True):
     """Show or hide specified annotations. Note that 'stage Ground-Truth' is
     the default annotation key of ground-truth stage labels in SignalGroups.
     """
     # Consider auto hints selection
-    if anno_type[0].isdigit():
+    if anno_type in ('-', 'none'):
+      self._annotations_to_show = []
+    elif anno_type[0].isdigit():
       indices = [int(n) - 1 for n in anno_type.split(',')]
       all_anno_keys = list(self._selected_signal.annotations.keys())
       anno_keys = [all_anno_keys[i] for i in indices]
@@ -346,7 +348,7 @@ class Monitor(Plotter):
     else:
       anno_key = f'{anno_type} {anno_label}'
       if anno_key in self._annotations_to_show:
-        self._annotations_to_show.remove(anno_key)
+        if not force_on: self._annotations_to_show.remove(anno_key)
       else:
         # Check anno_key before appending
         if anno_key not in self._selected_signal.annotations:
