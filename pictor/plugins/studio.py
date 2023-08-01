@@ -93,10 +93,11 @@ class Studio(object):
 
     # Create frames (arguments passed to `func`)
     frames = list(range(begin, end + 1))
-    # TODO: directly export mp4 file will lose last few frames. Use this code
-    #       block to circumvent this issue temporarily
     console.show_status(
       'Saving animation ({}[{}:{}]) ...'.format(tgt, frames[0], frames[-1]))
+
+    # TODO: directly export mp4 file will lose last few frames. Use this code
+    #       block to circumvent this issue temporarily
     if fmt == 'mp4' and n_tail > 0: frames.extend([-1] * n_tail)
 
     # -------------------------------------------------------------------------
@@ -116,11 +117,16 @@ class Studio(object):
     # This line is important when this Board is not shown
     self.refresh()
 
+    # TODO: BUG: after ani.save the animation will loop
+    #            if repeat=False is not set
+    # Ref: https://discourse.matplotlib.org/t/how-to-prevent-funcanimation-looping-a-single-time-after-save/21680/3
     ani = animation.FuncAnimation(
-      self.canvas.figure, func, frames=frames, interval=1000 / fps)
+      self.canvas.figure, func, frames=frames, interval=1000 / fps,
+      repeat=False)
 
     # Save animation using writer
     writer = None if fmt == 'gif' else animation.FFMpegWriter(fps=fps)
+
     ani.save(path, writer=writer)
 
     console.show_status('Animation saved to `{}`.'.format(path))
