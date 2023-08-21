@@ -53,6 +53,7 @@ class SignalGroup(Nomear):
 
   @Nomear.property()
   def channel_signal_dict(self):
+    """Returns {name: ds} dict in which ds contains `name` channel"""
     res = {}
     for ds in self.digital_signals:
       for name in ds.channels_names: res[name] = ds
