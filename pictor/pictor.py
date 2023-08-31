@@ -94,6 +94,15 @@ class Pictor(Easel, Database, Studio):
   def title_suffix(self, suffix):
     self.put_into_pocket(self.Keys.TITLE_SUFFIX, suffix, exclusive=False)
 
+  @property
+  def command_hints(self) -> dict:
+    ch = self._command_hints
+    ch.update(self.active_plotter.command_hints)
+    return ch
+
+  @Nomear.property()
+  def _command_hints(self) -> dict: return {}
+
   # endregion: Properties
 
   # region: Private Methods
@@ -176,8 +185,16 @@ class Pictor(Easel, Database, Studio):
 
   # region: Commands
 
+  def set_cursor(self, key: str, step: int = 0, cursor=None, refresh=False):
+    super().set_cursor(key, step, cursor, refresh)
+
+    # TODO: [patch] temporal workaround to fix hint issue
+    if key == self.Keys.PLOTTERS:
+      self.active_plotter.register_to_master(self)
+
   def set_object_cursor(self, i: int):
     self.set_cursor(self.Keys.OBJECTS, cursor=i - 1, refresh=True)
+
   def set_plotter_cursor(self, i: int):
     self.set_cursor(self.Keys.PLOTTERS, cursor=i - 1, refresh=True)
 

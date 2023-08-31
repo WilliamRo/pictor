@@ -48,6 +48,9 @@ class Plotter(Nomear):
   @property
   def class_name(self): return self.__class__.__name__
 
+  @Nomear.property()
+  def command_hints(self) -> dict: return {}
+
   # endregion: Properties
 
   # region: Methods to be overwritten
@@ -71,8 +74,8 @@ class Plotter(Nomear):
   def register_to_master(self, pictor):
     """Register self to pictor"""
     self.pictor = pictor
-    self.pictor.command_hints['set'] = lambda: self.get_sa_details()
-    self.pictor.command_hints['flip'] = lambda: self.get_sa_details(
+    self.command_hints['set'] = lambda: self.get_sa_details()
+    self.command_hints['flip'] = lambda: self.get_sa_details(
       [bool], 'Flippable attributes')
 
   def register_a_shortcut(self, key: str, func: Callable, description,

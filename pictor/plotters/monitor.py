@@ -101,10 +101,10 @@ class Monitor(Plotter):
       channels = self.hidden_channels if for_add_channels else self.channel_list
       hints += [f'[{i+1}] {name}' for i, name in enumerate(channels)]
       return '\n'.join(hints)
-    self.pictor.command_hints['sc'] = get_channel_hints
-    self.pictor.command_hints['set_channels'] = get_channel_hints
-    self.pictor.command_hints['ac'] = lambda: get_channel_hints(True)
-    self.pictor.command_hints['add_channels'] = lambda: get_channel_hints(True)
+    self.command_hints['sc'] = get_channel_hints
+    self.command_hints['set_channels'] = get_channel_hints
+    self.command_hints['ac'] = lambda: get_channel_hints(True)
+    self.command_hints['add_channels'] = lambda: get_channel_hints(True)
 
     # Set annotation hints
     def get_anno_hints():
@@ -112,8 +112,8 @@ class Monitor(Plotter):
       hints += [f'[{i+1}] {k}'
                 for i, k in enumerate(self._selected_signal.annotations.keys())]
       return '\n'.join(hints)
-    self.pictor.command_hints['ta'] = get_anno_hints
-    self.pictor.command_hints['toggle_annotation'] = get_anno_hints
+    self.command_hints['ta'] = get_anno_hints
+    self.command_hints['toggle_annotation'] = get_anno_hints
 
   def show_curves(self, x: np.ndarray, fig: plt.Figure, i: int):
     # Clear figure
