@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-=====================================================================-====
+from roma import console
 from roma import Nomear
 
 import numpy as np
@@ -127,13 +128,26 @@ class DigitalSignal(Nomear):
     return self.get_from_pocket(key)
 
   @staticmethod
-  def preprocess_iqr(x: np.ndarray, iqr=1, median=0, max_abs_deviation=20):
+  def preprocess_iqr(x: np.ndarray, iqr=1, median=0, max_abs_deviation=20,
+                     labels=None):
     """Rescale data (shape=[L, C]) TODO: tooooooo slow"""
     assert median == 0
 
     # Subtract median from each element
     x = x - np.median(x, axis=0)
     current_iqr = np.percentile(x, 75, axis=0) - np.percentile(x, 25, axis=0)
+
+    # Handle 0 iqr issue
+    zero_mask = current_iqr == 0
+    if any(zero_mask):
+      C = x.shape[1]
+      if labels is None: labels = [f'Channel-{i+1}' for i in range(C)]
+      assert len(labels) == C
+      current_iqr[zero_mask] = 1.
+      mask_labels = [l for m, l in zip(zero_mask, labels) if m]
+      console.warning(
+        f'Failed to rescale {",".join(mask_labels)} since IQR is 0.')
+
     x = x / current_iqr * iqr
 
     # Clip outliers if necessary
