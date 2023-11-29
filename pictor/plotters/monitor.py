@@ -242,7 +242,8 @@ class Monitor(Plotter):
       color = colors[index % len(colors)]
 
     # Determine other plot settings
-    duration  = self._selected_signal.window_duration
+    ss = self._selected_signal
+    duration  = ss.window_duration
     if duration < 1000: width = 16
     elif duration < 2000: width = 8
     elif duration < 4000: width = 4
@@ -258,6 +259,17 @@ class Monitor(Plotter):
     # Plot
     line, = right_ax.plot(
       ticks, values, color=color, zorder=999, alpha=alpha, linewidth=width)
+
+    # Plot epoch splitter if necessary
+    MAX_WIN_SIZE = 120
+    if duration < MAX_WIN_SIZE:
+      start_time, end_time = left_ax.get_xlim()
+      candidates = [start_time // 30 * 30 + i * 30
+                    for i in range(MAX_WIN_SIZE // 30 + 1)]
+      for t in candidates:
+        if t < start_time or t > end_time: continue
+        left_ax.plot([t, t], left_ax.get_ylim(), 'b:',
+                     linewidth=4, alpha=0.5)
 
     # Set right axes if necessary
     if should_init_right_ax:

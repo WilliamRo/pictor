@@ -97,6 +97,18 @@ class SignalGroup(Nomear):
       self.digital_signals = digital_signals
       self.annotations = annotations
 
+  def extract_channels(self, channel_names: list):
+    """Extract signals with a same fs"""
+    digital_signals = []
+    for ds in self.digital_signals:
+      cn_list = [cn for cn in ds.channels_names if cn in channel_names]
+      if len(cn_list) == 0: continue
+      digital_signals.append(ds.extract_channels(cn_list))
+
+    sg = SignalGroup(digital_signals, self.label, **self.properties)
+    sg.annotations = self.annotations
+    return sg
+
   def __getitem__(self, item):
     if item not in self.channel_signal_dict:
       raise KeyError(f'!! Signal label `{item}` not found')
