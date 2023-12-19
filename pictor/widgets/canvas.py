@@ -34,6 +34,10 @@ class Canvas(WidgetBase):
     self.figure = plt.Figure(figsize=figure_size, dpi=100)
     self._canvas = FigureCanvasTkAgg(self.figure, master=self.pictor)
 
+    # PATCH: bind resize event callback
+    self._canvas.mpl_connect('resize_event',
+                             lambda _: self.figure.tight_layout())
+
     # Call parent's constructor
     super(Canvas, self).__init__(self._canvas.get_tk_widget())
 
@@ -66,18 +70,30 @@ class Canvas(WidgetBase):
 
   # region: Private Methods
 
+  # def _clear(self):
+  #   # Clear 2D axes if exists
+  #   if self.in_pocket(self.Keys.AXES2D):
+  #     self.get_from_pocket(self.Keys.AXES2D, put_back=False)
+  #
+  #   # Clear 3D axes if exists
+  #   if self.in_pocket(self.Keys.AXES3D):
+  #     axes3d = self.get_from_pocket(self.Keys.AXES3D, put_back=False)
+  #     self.view_angle = (axes3d.elev, axes3d.azim)
+  #
+  #   # Clear figure
+  #   self.figure.clear()
+
   def _clear(self):
-    # Clear 2D axes if exists
     if self.in_pocket(self.Keys.AXES2D):
-      self.get_from_pocket(self.Keys.AXES2D, put_back=False)
+      if not self.in_pocket(self.Keys.AXES3D):
+        self.get_from_pocket(self.Keys.AXES2D).clear()
+      else:
+        self.get_from_pocket(self.Keys.AXES2D, put_back=False)
 
     # Clear 3D axes if exists
     if self.in_pocket(self.Keys.AXES3D):
       axes3d = self.get_from_pocket(self.Keys.AXES3D, put_back=False)
       self.view_angle = (axes3d.elev, axes3d.azim)
-
-    # Clear figure
-    self.figure.clear()
 
   # endregion: Private Methods
 
@@ -89,9 +105,6 @@ class Canvas(WidgetBase):
 
     # Call active plotter
     self.pictor.active_plotter()
-
-    # Tight layout and refresh
-    self.figure.tight_layout()
 
     if wait_for_idle: self._canvas.draw_idle()
     else: self._canvas.draw()
