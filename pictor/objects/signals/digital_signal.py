@@ -72,6 +72,12 @@ class DigitalSignal(Nomear):
     return [(name, self.ticks, self.data[:, i])
             for i, name in enumerate(self.channels_names)]
 
+  @Nomear.property()
+  def name_data_dict(self):
+    return {name: self.data[:, i]
+            for i, name in enumerate(self.channels_names)}
+
+
   # endregion: Properties
 
   # region: Special Methods
@@ -118,6 +124,14 @@ class DigitalSignal(Nomear):
     # Add name
     if name is None: name = f'Channel-{self.length + 1}'
     self.channels_names.append(name)
+
+  def extract_channels(self, channels_names):
+    indices = tuple([i for i, cn in enumerate(self.channels_names)
+                     if cn in channels_names])
+
+    return DigitalSignal(
+      self.data[:, indices], self.sfreq, self._ticks,
+      channels_names, ';'.join(channels_names), self.off_set)
 
   def get_channel_percentile(self, name, percentile):
     assert 0 <= percentile <= 100
