@@ -35,8 +35,8 @@ class Canvas(WidgetBase):
     self._canvas = FigureCanvasTkAgg(self.figure, master=self.pictor)
 
     # PATCH: bind resize event callback
-    self._canvas.mpl_connect('resize_event',
-                             lambda _: self.figure.tight_layout())
+    # self._canvas.mpl_connect('resize_event',
+    #                          lambda _: self.figure.tight_layout())
 
     # Call parent's constructor
     super(Canvas, self).__init__(self._canvas.get_tk_widget())
@@ -70,30 +70,30 @@ class Canvas(WidgetBase):
 
   # region: Private Methods
 
-  # def _clear(self):
-  #   # Clear 2D axes if exists
-  #   if self.in_pocket(self.Keys.AXES2D):
-  #     self.get_from_pocket(self.Keys.AXES2D, put_back=False)
-  #
-  #   # Clear 3D axes if exists
-  #   if self.in_pocket(self.Keys.AXES3D):
-  #     axes3d = self.get_from_pocket(self.Keys.AXES3D, put_back=False)
-  #     self.view_angle = (axes3d.elev, axes3d.azim)
-  #
-  #   # Clear figure
-  #   self.figure.clear()
-
   def _clear(self):
+    # Clear 2D axes if exists
     if self.in_pocket(self.Keys.AXES2D):
-      if not self.in_pocket(self.Keys.AXES3D):
-        self.get_from_pocket(self.Keys.AXES2D).clear()
-      else:
-        self.get_from_pocket(self.Keys.AXES2D, put_back=False)
+      self.get_from_pocket(self.Keys.AXES2D, put_back=False)
 
     # Clear 3D axes if exists
     if self.in_pocket(self.Keys.AXES3D):
       axes3d = self.get_from_pocket(self.Keys.AXES3D, put_back=False)
       self.view_angle = (axes3d.elev, axes3d.azim)
+
+    # Clear figure
+    self.figure.clear()
+
+  # def _clear(self):
+  #   if self.in_pocket(self.Keys.AXES2D):
+  #     if not self.in_pocket(self.Keys.AXES3D):
+  #       self.get_from_pocket(self.Keys.AXES2D).clear()
+  #     else:
+  #       self.get_from_pocket(self.Keys.AXES2D, put_back=False)
+  #
+  #   # Clear 3D axes if exists
+  #   if self.in_pocket(self.Keys.AXES3D):
+  #     axes3d = self.get_from_pocket(self.Keys.AXES3D, put_back=False)
+  #     self.view_angle = (axes3d.elev, axes3d.azim)
 
   # endregion: Private Methods
 
