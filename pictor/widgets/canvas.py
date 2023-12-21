@@ -106,6 +106,9 @@ class Canvas(WidgetBase):
     # Call active plotter
     self.pictor.active_plotter()
 
+    # Tight layout and refresh
+    self.figure.tight_layout()
+
     if wait_for_idle: self._canvas.draw_idle()
     else: self._canvas.draw()
 
