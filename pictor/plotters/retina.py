@@ -36,7 +36,7 @@ class Retina(Plotter):
     self.new_settable_attr('alpha', None, float, 'Alpha value')
     self.new_settable_attr('vmin', None, float, 'Min value')
     self.new_settable_attr('vmax', None, float, 'Max value')
-    self.new_settable_attr('cmap', None, float, 'Color map')
+    self.new_settable_attr('cmap', None, str, 'Color map')
     self.new_settable_attr('interpolation', None, str, 'Interpolation method')
     self.new_settable_attr('title', False, bool, 'Whether to show title')
     self.new_settable_attr('auto_scale', False, bool, 'Whether use auto scale')
