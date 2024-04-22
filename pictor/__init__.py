@@ -13,6 +13,7 @@
 # limitations under the License.
 # ======-=========================================================-=============
 from .pictor import Pictor
+from .plotters.plotter_base import Plotter
 
 # ------------------------------------------------------------------------------
 # Deprecated Objects
