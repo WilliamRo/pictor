@@ -242,7 +242,9 @@ class BusyIndicator(Nomear):
     self.pictor.busy_plotter = Plotter(self.show_busy_message,
                                        pictor=self.pictor)
     if self.auto_refresh: self.pictor.refresh()
+    self.pictor.update_idletasks()
 
   def __exit__(self, *args):
     self.pictor.busy_plotter = None
     if self.auto_refresh: self.pictor.refresh()
+    self.pictor.update_idletasks()

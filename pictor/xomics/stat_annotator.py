@@ -13,6 +13,7 @@
 # limitations under the License.
 # ====-========================================================================-
 from pictor.xomics.stat_analyzers import auto_dual_test
+from pictor.xomics.stat_analyzers import single_factor_analysis
 from roma import Nomear
 
 import matplotlib.pyplot as plt
@@ -26,17 +27,7 @@ class Annotator(Nomear):
     self.ax = ax
 
   def annotate(self):
-    from scipy import stats
-
-    reports = []
-    N = len(self.groups)
-    for i in range(N):
-      for j in range(i + 1, N):
-        group1, group2 = self.groups[i], self.groups[j]
-        p_val, method = auto_dual_test(group1, group2, return_detail=True)
-        reports.append((i, j, p_val, method))
-
-    reports = sorted(reports, key=lambda x: x[2], reverse=True)
+    reports = single_factor_analysis(self.groups)
 
     # Get current y limits
     y_min, y_max = self.ax.get_ylim()

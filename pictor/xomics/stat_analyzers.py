@@ -17,6 +17,17 @@ from collections import OrderedDict
 import numpy as np
 
 
+def single_factor_analysis(groups: list):
+  reports = []
+  N = len(groups)
+  for i in range(N):
+    for j in range(i + 1, N):
+      group1, group2 = groups[i], groups[j]
+      p_val, method = auto_dual_test(group1, group2, return_detail=True)
+      reports.append((i, j, p_val, method))
+
+  return sorted(reports, key=lambda x: x[2], reverse=True)
+
 
 def auto_dual_test(group1, group2, return_detail=False):
   from scipy import stats

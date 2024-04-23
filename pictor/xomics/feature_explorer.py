@@ -13,8 +13,10 @@
 # limitations under the License.
 # ====-======================================================================-==
 from pictor.xomics.stat_annotator import Annotator
+from pictor.xomics.stat_analyzers import single_factor_analysis
 from pictor import Plotter
 from roma import check_type
+from roma import console
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -51,8 +53,20 @@ class FeatureExplorer(Plotter):
   @property
   def num_classes(self): return len(self.target_labels)
 
-  # endregion: Properties
+  @Plotter.property()
+  def single_factor_analysis_reports(self):
+    """reports[n] = [(i, j, p_val, method), ...], sorted by p_val,
+       here n denotes the n-th feature.
+    """
+    reports = []
+    for n in range(self.features.shape[1]):
+      features = self.features[:, n]
+      groups = [features[self.targets == i]
+                for i, _ in enumerate(self.target_labels)]
+      reports.append(single_factor_analysis(groups))
+    return reports
 
+  # endregion: Properties
 
   # region: Plot Methods
 
@@ -75,6 +89,15 @@ class FeatureExplorer(Plotter):
 
   # region: Commands
 
+  def sort(self, sort_by='p_val'):
+    assert sort_by == 'p_val'
+    console.show_status('Sorting by p-values ...')
+    with self.pictor.busy('Sorting ...'):
+      indices = np.argsort(
+        [r[0][2] for r in self.single_factor_analysis_reports])
+    self.pictor.objects = indices
+    return indices
+
   def register_shortcuts(self):
     self.register_a_shortcut(
       'a', lambda: self.flip('statanno'), 'Toggle statanno')
@@ -85,7 +108,7 @@ class FeatureExplorer(Plotter):
 
   @classmethod
   def explore(cls, features, targets, feature_labels=None, target_labels=None,
-              title='Feature Explorer', fig_size=(5, 5)):
+              title='Feature Explorer', fig_size=(5, 5), auto_show=True):
     from pictor import Pictor
 
     # 1. Sanity check
@@ -111,7 +134,8 @@ class FeatureExplorer(Plotter):
     fe.put_into_pocket(fe.Keys.target_labels, target_labels)
     p.add_plotter(fe)
 
-    p.show()
+    if auto_show: p.show()
+    return p, fe
 
   # endregion: Public Methods
 
