@@ -17,6 +17,7 @@ from collections import OrderedDict
 import numpy as np
 
 
+
 def single_factor_analysis(groups: list):
   reports = []
   N = len(groups)

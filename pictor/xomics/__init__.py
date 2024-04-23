@@ -13,3 +13,4 @@
 # limitations under the License.
 # ======-=======================================================-===============
 from .feature_explorer import FeatureExplorer
+from .omix import Omix
