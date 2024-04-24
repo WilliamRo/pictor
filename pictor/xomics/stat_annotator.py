@@ -26,7 +26,7 @@ class Annotator(Nomear):
     self.groups = groups
     self.ax = ax
 
-  def annotate(self):
+  def annotate(self, n_top=2):
     reports = single_factor_analysis(self.groups)
 
     # Get current y limits
@@ -38,7 +38,9 @@ class Annotator(Nomear):
       y = y_max + n * h
       self.ax.plot([i, i, j, j], [y + h * lhp, y + h, y + h, y + h * lhp],
                    lw=1.5, c=color, alpha=0.2)
-      self.ax.text((i + j) * .5, y + h, f'{method}: {p_val:.4f}',
+      p_val_str = f'{p_val:.2E}' if p_val < 0.001 else f'{p_val:.3f}'
+      self.ax.text((i + j) * .5, y + h, f'{method}: {p_val_str}',
                    ha='center', va='bottom', color=color)
+    self.ax.set_ylim(y_min, y_max + (n + n_top) * h)
 
 

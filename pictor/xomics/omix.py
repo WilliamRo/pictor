@@ -81,7 +81,8 @@ class Omix(Nomear):
 
   # region: IO
 
-  def load(self, file_path: str, verbose=True):
+  @staticmethod
+  def load(file_path: str, verbose=True):
     return io.load_file(file_path, verbose=verbose)
 
   def save(self, file_path: str, verbose=True):
@@ -101,19 +102,16 @@ class Omix(Nomear):
     assert isinstance(other, Omix), '!! other must be an instance of Omix'
 
     features = np.concatenate((self.features, other.features), axis=1)
-    targets = np.concatenate((self.targets, other.targets))
+    assert all(self.targets == other.targets), '!! targets must be the same'
 
     if self._feature_labels is None and other._feature_labels is None:
       feature_labels = None
     else: feature_labels = self.feature_labels + other.feature_labels
 
-    if self._target_labels is None and other._target_labels is None:
-      target_labels = None
-    else: target_labels = self.target_labels + other.target_labels
+    assert self.target_labels == other.target_labels, '!! target_labels must be the same'
 
     data_name = f'{self.data_name} + {other.data_name}'
-    return Omix(features, targets, feature_labels, target_labels, data_name)
-
+    return Omix(features, self.targets, feature_labels, self.target_labels, data_name)
 
   # endregion: Overriding
 

@@ -58,7 +58,32 @@ class FeatureExplorer(Plotter):
 
   # region: Plot Methods
 
-  def plot(self, x, ax: plt.Axes):
+  def multi_plots(self, indices: str = '1-10', rows: int = 2):
+    """Plot multiple features at once
+
+    Args:
+      indices: str, can be
+        (1) '1,4,6,2'
+        (2) '1-5'
+    """
+    if '-' in indices:
+      start, end = map(int, indices.split('-'))
+      indices = list(range(start, end + 1))
+    else:
+      indices = list(map(int, indices.split(',')))
+
+    N = len(indices)
+    cols = (N + 1) // rows
+    fig, axes = plt.subplots(rows, cols, figsize=(10, 6))
+    for i, ax in zip(indices, axes.flatten()):
+      self.plot(self.pictor.objects[i - 1], ax, max_title_len=15, n_top=3)
+
+    plt.tight_layout()
+    plt.show()
+  mp = multi_plots
+
+
+  def plot(self, x, ax: plt.Axes, max_title_len=999, **kwargs):
     features = self.features[:, x]
     groups = [features[self.targets == i]
               for i, _ in enumerate(self.target_labels)]
@@ -66,12 +91,12 @@ class FeatureExplorer(Plotter):
     box = ax.boxplot(groups, showfliers=False,
                      positions=range(len(groups)))
     ax.set_xticklabels(self.target_labels)
-    ax.set_title(self.feature_labels[x])
+    ax.set_title(self.feature_labels[x][:max_title_len])
 
     # Show statistical annotation if required
     if self.get('statanno'):
       ann = Annotator(groups, ax)
-      ann.annotate()
+      ann.annotate(**kwargs)
 
   # endregion: Plot Methods
 
@@ -84,6 +109,7 @@ class FeatureExplorer(Plotter):
       indices = np.argsort(
         [r[0][2] for r in self.omix.single_factor_analysis_reports])
     self.pictor.objects = indices
+    self.refresh()
     return indices
 
   def register_shortcuts(self):
@@ -106,7 +132,7 @@ class FeatureExplorer(Plotter):
 
     # 2. Initiate Pictor and show
     p = Pictor(title=title, figure_size=fig_size)
-    p.objects = list(range(features.shape[1]))
+    p.objects = list(range(omix.features.shape[1]))
     p.labels = omix.feature_labels
 
     fe = cls(omix)
