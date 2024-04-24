@@ -76,11 +76,62 @@ class FeatureExplorer(Plotter):
     cols = (N + 1) // rows
     fig, axes = plt.subplots(rows, cols, figsize=(10, 6))
     for i, ax in zip(indices, axes.flatten()):
-      self.plot(self.pictor.objects[i - 1], ax, max_title_len=15, n_top=3)
+      self.plot(self.pictor.objects[i - 1], ax,
+                max_title_len=15, n_top=rows + 1)
 
     plt.tight_layout()
     plt.show()
+
   mp = multi_plots
+
+
+  def cross_plots(self, indices: str = '1-3'):
+    """Generate a cross plot
+
+    Args:
+      indices: str, can be
+        (1) '1,4,6'
+        (2) '1-3'
+    """
+    if '-' in indices:
+      start, end = map(int, indices.split('-'))
+      indices = list(range(start, end + 1))
+    else:
+      indices = list(map(int, indices.split(',')))
+
+    N = len(indices)
+
+    # (1) Draw diagonal plots
+    diag_axes = []
+    for i in range(N):
+      ax = plt.subplot(N, N, i * N + i + 1)
+      fi = self.pictor.objects[indices[i] - 1]
+      self.plot(fi, ax, max_title_len=15, n_top=N + 1)
+      diag_axes.append(ax)
+
+    # (2) Draw upper triangle plots
+    for i in range(N):
+      for j in range(i + 1, N):
+        fi, fj = [self.pictor.objects[indices[k] - 1] for k in [i, j]]
+        ax: plt.Axes = plt.subplot(N, N, i * N + j + 1)
+
+        x1, x2 = self.features[:, fi], self.features[:, fj]
+        groups = [(x1[self.targets == k], x2[self.targets == k])
+                  for k, _ in enumerate(self.target_labels)]
+        for tid, (_x1, _x2) in enumerate(groups):
+          color = ['b', 'r', 'g', 'c', 'm', 'y', 'k', 'w'][tid]
+          ax.scatter(_x2, _x1, alpha=0.3, c=color, s=2,
+                     label=self.target_labels[tid])
+        ax.set_xlim(diag_axes[j].get_ylim())
+        ax.set_ylim(diag_axes[i].get_ylim())
+        ax.legend()
+
+    plt.gcf().set_figheight(7)
+    plt.gcf().set_figwidth(7)
+    plt.tight_layout()
+    plt.show()
+
+  cp = cross_plots
 
 
   def plot(self, x, ax: plt.Axes, max_title_len=999, **kwargs):
