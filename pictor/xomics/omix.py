@@ -24,6 +24,7 @@ class Omix(Nomear):
 
   def __init__(self, features, targets, feature_labels=None,
                target_labels=None, data_name='Omix'):
+    """features.shape = [n_samples, n_features]"""
     self.features = features
     self.targets = targets
 
@@ -63,11 +64,22 @@ class Omix(Nomear):
       reports.append(single_factor_analysis(groups))
     return reports
 
+  @property
+  def corr_matrix(self): return np.corrcoef(self.features, rowvar=False)
+
   # endregion: Properties
 
   # region: Feature Selection
 
+  def select_features(self, method: str, **kwargs):
+    method = method.lower()
+    if method in ('pca', ):
+      pass
+    elif method in ('lasso', ):
+      pass
+    else: raise KeyError(f'!! Unknown feature selecting method "{method}"')
 
+    return
 
   # endregion: Feature Selection
 

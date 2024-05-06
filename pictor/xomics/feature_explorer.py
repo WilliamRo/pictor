@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====-======================================================================-==
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pictor.xomics.stat_annotator import Annotator
 from pictor.xomics.omix import Omix
 from pictor import Plotter
@@ -84,7 +85,6 @@ class FeatureExplorer(Plotter):
 
   mp = multi_plots
 
-
   def cross_plots(self, indices: str = '1-3'):
     """Generate a cross plot
 
@@ -133,6 +133,36 @@ class FeatureExplorer(Plotter):
 
   cp = cross_plots
 
+  def correlation_plot(self, cmap: str='RdBu', show_name: int=1):
+    """Plot correlation matrix"""
+    # Calculate correlation matrix (consider sorted indices)
+    indices = np.array(self.pictor.objects)
+    matrix = np.corrcoef(self.omix.features[indices], rowvar=False)
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(7, 6))
+    im = ax.imshow(matrix, cmap=cmap)
+
+    # Set ticks
+    if show_name:
+      ticks = np.arange(len(self.feature_labels))
+      feature_labels = [self.feature_labels[i] for i in indices]
+      ax.set_xticks(ticks=ticks, labels=feature_labels, rotation=45)
+      ax.set_yticks(ticks=ticks, labels=feature_labels)
+    else:
+      ax.set_xticks([])
+      ax.set_yticks([])
+
+    # Show color bar
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.05)
+    fig.colorbar(im, cax=cax)
+
+    # Show
+    fig.tight_layout()
+    plt.show()
+
+  cop = correlation_plot
 
   def plot(self, x, ax: plt.Axes, max_title_len=999, **kwargs):
     features = self.features[:, x]
@@ -153,6 +183,15 @@ class FeatureExplorer(Plotter):
 
   # region: Commands
 
+  def select_features(self, method: str, **kwargs):
+    """Select features using a specific method"""
+    key = (method, tuple(kwargs.items()))
+
+    with self.pictor.busy('Selecting features ...'):
+      pass
+
+  sf = select_features
+
   def sort(self, sort_by='p_val'):
     assert sort_by == 'p_val'
     console.show_status('Sorting by p-values ...')
@@ -166,6 +205,18 @@ class FeatureExplorer(Plotter):
   def register_shortcuts(self):
     self.register_a_shortcut(
       'a', lambda: self.flip('statanno'), 'Toggle statanno')
+
+  def list_methods(self):
+    """Methods List:
+    - cp: cross_plots, plot cross plots
+    - cop: correlation_plot, plot correlation matrix
+    - mp: multi_plots, plot multiple features at one figure
+    - sf: select_features, reduce feature dimensionality
+    - sort: sort features by p-values
+    """
+    pass
+
+  ls = list_methods
 
   # endregion: Commands
 
