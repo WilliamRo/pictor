@@ -137,11 +137,11 @@ class FeatureExplorer(Plotter):
     """Plot correlation matrix"""
     # Calculate correlation matrix (consider sorted indices)
     indices = np.array(self.pictor.objects)
-    matrix = np.corrcoef(self.omix.features[indices], rowvar=False)
+    matrix = np.corrcoef(self.omix.features[:, indices], rowvar=False)
 
     # Plot
     fig, ax = plt.subplots(figsize=(7, 6))
-    im = ax.imshow(matrix, cmap=cmap)
+    im = ax.imshow(matrix, cmap=cmap, vmin=-1, vmax=1)
 
     # Set ticks
     if show_name:
@@ -183,14 +183,48 @@ class FeatureExplorer(Plotter):
 
   # region: Commands
 
+  # region: Feature Selection
+
+  def sf_pca(self, n_components: int=3, standardize: int=1):
+    """Feature selection using PCA"""
+    self.select_features('PCA', n_components=n_components,
+                         standardize=standardize)
+
+  def sf_lasso(self, verbose: int=0, n_splits: int=5, strategy: str='grid',
+               random_state: int=None, threshold=0.001, min_alpha_exp=-7,
+               max_alpha_exp=1, n_alphas=100, standardize: int=1):
+    """Feature selection using Lasso regression"""
+    hp_space = {'alpha': np.logspace(min_alpha_exp, max_alpha_exp, n_alphas)}
+    self.select_features(
+      'Lasso', n_splits=n_splits, strategy=strategy, hp_space=hp_space,
+      random_state=random_state, threshold=threshold, verbose=verbose,
+      standardize=standardize)
+
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
-    key = (method, tuple(kwargs.items()))
+    # key = (method, tuple(kwargs.items()))
 
     with self.pictor.busy('Selecting features ...'):
-      pass
+      omix = self.omix.select_features(method, **kwargs)
 
-  sf = select_features
+    title = f'{self.pictor.static_title} - {method}'
+    omix.show_in_explorer(title=title)
+
+  # endregion: Feature Selection
+
+  def report(self, report_feature_sum: int = 0, report_stat: int = 1):
+    self.omix.report(report_feature_sum=report_feature_sum,
+                     report_stat=report_stat > 0)
+
+  def standardize(self, update_self: int=0):
+    """Standardize features"""
+    result = self.omix.standardize(update_self=update_self)
+    title = f'{self.pictor.static_title} - Standardized'
+    if update_self:
+      self.pictor.static_title = title
+      self.refresh()
+    else: result.show_in_explorer(title=title)
+  sdd = standardize
 
   def sort(self, sort_by='p_val'):
     assert sort_by == 'p_val'
@@ -207,12 +241,21 @@ class FeatureExplorer(Plotter):
       'a', lambda: self.flip('statanno'), 'Toggle statanno')
 
   def list_methods(self):
-    """Methods List:
+    """Below are the methods you can use in FeatureExplorer
+
+    MISC Methods
+    ------------
     - cp: cross_plots, plot cross plots
     - cop: correlation_plot, plot correlation matrix
     - mp: multi_plots, plot multiple features at one figure
-    - sf: select_features, reduce feature dimensionality
+    - report: report omix details
+    - sdd: standardize features
     - sort: sort features by p-values
+
+    Features Selection Methods
+    --------------------------
+    - sf_lasso: select features using Lasso regression
+    - sf_pca: select features using PCA
     """
     pass
 
@@ -252,6 +295,17 @@ if __name__ == '__main__':
 
   iris = datasets.load_iris()
 
-  FeatureExplorer.explore(
+  auto_show = 0
+  p, fe = FeatureExplorer.explore(
     iris.data, iris.target, feature_labels=iris.feature_names,
-    target_labels=iris.target_names, title='Iris Explorer')
+    target_labels=iris.target_names, title='Iris Explorer', auto_show=auto_show)
+
+  o = fe.omix
+  o.report()
+  print()
+
+  shuffle = 1
+  o1, o2 = o.split(4, 1, data_labels=['Data_1', 'Data_2'], shuffle=shuffle == 1)
+  o1.report(report_feature_sum=True), o2.report(report_feature_sum=True)
+
+

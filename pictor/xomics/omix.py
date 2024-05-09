@@ -13,8 +13,10 @@
 # limitations under the License.
 # ===-==================================================================-=======
 from pictor.xomics.stat_analyzers import single_factor_analysis
+from roma import console
 from roma import io
 from roma import Nomear
+from typing import List
 
 import numpy as np
 
@@ -52,6 +54,18 @@ class Omix(Nomear):
     return self._target_labels
 
   @Nomear.property()
+  def groups(self):
+    """Lists of indices of samples in each class"""
+    return [np.where(self.targets == i)[0] for i in np.unique(self.targets)]
+
+  @Nomear.property()
+  def omix_groups(self):
+    """Returns omix objects for each group"""
+    return [self.duplicate(features=self.features[group],
+                           targets=self.targets[group])
+            for group in self.groups]
+
+  @Nomear.property()
   def single_factor_analysis_reports(self):
     """reports[n] = [(i, j, p_val, method), ...], sorted by p_val,
        here n denotes the n-th feature.
@@ -64,7 +78,13 @@ class Omix(Nomear):
       reports.append(single_factor_analysis(groups))
     return reports
 
-  @property
+  @Nomear.property()
+  def feature_mean(self): return np.mean(self.features, axis=0, keepdims=True)
+
+  @Nomear.property()
+  def feature_std(self): return np.std(self.features, axis=0, keepdims=True)
+
+  @Nomear.property()
   def corr_matrix(self): return np.corrcoef(self.features, rowvar=False)
 
   # endregion: Properties
@@ -73,13 +93,25 @@ class Omix(Nomear):
 
   def select_features(self, method: str, **kwargs):
     method = method.lower()
+
+    omix = self.standardize() if kwargs.get('standardize', 1) else self
+
     if method in ('pca', ):
-      pass
+      from sklearn.decomposition import PCA
+
+      n_components = kwargs.get('n_components', 3)
+
+      pca = PCA(n_components=n_components)
+      feature_labels = [f'PC-{i + 1}' for i in range(n_components)]
+      omix_reduced = self.duplicate(features=pca.fit_transform(omix.features),
+                                    feature_labels=feature_labels)
     elif method in ('lasso', ):
-      pass
+      from pictor.xomics.ml.lasso import select_features
+
+      omix_reduced = select_features(omix, **kwargs)
     else: raise KeyError(f'!! Unknown feature selecting method "{method}"')
 
-    return
+    return omix_reduced
 
   # endregion: Feature Selection
 
@@ -105,12 +137,103 @@ class Omix(Nomear):
 
   # region: Public Methods
 
+  def report(self, **kwargs):
+    console.show_info(f'Details of `{self.data_name}`:')
+    console.supplement(f'Features shape = {self.features.shape}')
+    console.supplement(f'Target shape = {self.targets.shape}')
+    console.supplement(f'Groups:')
+    for i, group in enumerate(self.groups): console.supplement(
+      f'{self.target_labels[i]}: {len(group)} samples', level=2)
+
+    if kwargs.get('report_stat', True):
+      mu_min, mu_max = min(self.feature_mean[0]), max(self.feature_mean[0])
+      console.supplement(f'Feature mean in [{mu_min}, {mu_max}]')
+
+      sigma_min, sigma_max = min(self.feature_std[0]), max(self.feature_std[0])
+      console.supplement(f'Feature std in [{sigma_min}, {sigma_max}]')
+
+    # This is for validating split results when shuffle is False
+    if kwargs.get('report_feature_sum', False):
+      console.supplement(f'Feature sum = {np.sum(self.features)}')
+
+  def standardize(self, omix=None, update_self=False):
+    if omix is None: omix = self
+    result = self if update_self else self.duplicate()
+    mu, sigma = omix.feature_mean, omix.feature_std
+    result.features = (omix.features - mu) / sigma
+    return result
+
+  def duplicate(self, **kwargs) -> 'Omix':
+    features = kwargs.get('features', self.features.copy())
+    targets = kwargs.get('targets', self.targets.copy())
+    feature_labels = kwargs.get('feature_labels', self._feature_labels)
+    target_labels = kwargs.get('target_labels', self._target_labels)
+    data_name = kwargs.get('data_name', self.data_name)
+    return Omix(features, targets, feature_labels, target_labels, data_name)
+
+  def split(self, *ratios, data_labels=None, balance_classes=True,
+            shuffle=True, random_state=None) -> List['Omix']:
+    from sklearn.model_selection import train_test_split
+
+    # Sanity check
+    if data_labels is None:
+      data_labels = [f'{self.data_name}-{i + 1}' for i in range(len(ratios))]
+    assert len(ratios) == len(data_labels), '!! ratios and data_labels must have the same length'
+    assert len(ratios) > 1, '!! At least two splits are required'
+
+    X, y = self.features, self.targets
+
+    if len(ratios) == 2:
+      # End of recursion
+      test_size = ratios[1] / sum(ratios)
+      stratify = y if balance_classes else None
+
+      if balance_classes and not shuffle:
+        # Note that this is not supported by train_test_split
+        om1_list, om2_list = [], []
+        for om in self.omix_groups:
+          om1, om2 = om.split(*ratios, balance_classes=False, shuffle=False)
+          om1_list.append(om1), om2_list.append(om2)
+        om1: Omix = sum(om1_list[1:], start=om1_list[0])
+        om2: Omix = sum(om2_list[1:], start=om2_list[0])
+        om1.data_name = data_labels[0]
+        om2.data_name = data_labels[1]
+      else:
+        # Split data using train_test_split
+        X_train, X_test, y_train, y_test = train_test_split(
+          X, y, test_size=test_size, random_state=random_state,
+          shuffle=shuffle, stratify=stratify)
+
+        om1 = self.duplicate(
+          features=X_train, targets=y_train, data_name=data_labels[0])
+        om2 = self.duplicate(
+          features=X_test, targets=y_test, data_name=data_labels[1])
+
+      return [om1, om2]
+    else:
+      # Recursively split
+      om1, om2 = self.split(
+        sum(ratios[:-1]), ratios[-1], data_labels=['temp', data_labels[-1]],
+        balance_classes=balance_classes, random_state=random_state,
+        shuffle=shuffle)
+      return om1.split(*ratios[:-1], data_labels=data_labels[:-1],
+                       balance_classes=balance_classes, shuffle=shuffle,
+                       random_state=random_state) + [om2]
 
   # endregion: Public Methods
 
   # region: Overriding
 
   def __add__(self, other):
+    assert isinstance(other, Omix), '!! other must be an instance of Omix'
+
+    data_name = f'{self.data_name} + {other.data_name}'
+    return self.duplicate(
+      features=np.concatenate((self.features, other.features)),
+      targets=np.concatenate((self.targets, other.targets)),
+      data_name=data_name)
+
+  def __mul__(self, other):
     assert isinstance(other, Omix), '!! other must be an instance of Omix'
 
     features = np.concatenate((self.features, other.features), axis=1)
@@ -122,8 +245,9 @@ class Omix(Nomear):
 
     assert self.target_labels == other.target_labels, '!! target_labels must be the same'
 
-    data_name = f'{self.data_name} + {other.data_name}'
-    return Omix(features, self.targets, feature_labels, self.target_labels, data_name)
+    data_name = f'{self.data_name} x {other.data_name}'
+    return Omix(features, self.targets, feature_labels, self.target_labels,
+                data_name)
 
   # endregion: Overriding
 
