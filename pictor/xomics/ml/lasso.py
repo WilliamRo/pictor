@@ -13,58 +13,33 @@
 # limitations under the License.
 # ====-====================================================================-====
 from pictor.xomics.ml.ml_engine import MLEngine, Omix
-from roma import console
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import Lasso as SKLasso
 
 import numpy as np
 
 
 
-def select_features(omix: Omix, **kwargs):
-    """Select features using Lasso regression"""
-    # Tune hyperparameters
-    n_splits = kwargs.get('n_splits', 5)
-    strategy = kwargs.get('strategy', 'grid')
-    random_state = kwargs.get('random_state', None)
-    hp_space = kwargs.get('hp_space', {'alpha': np.logspace(-6, 1, 20)})
-    verbose = kwargs.get('verbose', 0)
-    tol = kwargs.get('tol', 1e-2)
+class Lasso(MLEngine):
+  SK_CLASS = SKLasso
+  DEFAULT_HP_SPACE = {'alpha': np.logspace(-6, 1, 20)}
+  DEFAULT_HP_MODEL_INIT_KWARGS = {'tol': 1e-2}
 
-    if verbose == 0:
-      import warnings
-      warnings.filterwarnings('ignore')
 
-    ml = MLEngine(omix, random_state=random_state)
-    hp = ml.tune_hyperparameters(
-      Lasso(tol=tol), hp_space, n_splits=n_splits, strategy=strategy)
+  def select_features(self, omix: Omix, **kwargs):
+    # (0) get settings
+    verbose = kwargs.get('verbose', self.verbose)
+    threshold = kwargs.get('threshold', 0.001)
 
-    # Fit data using best hyperparameters
-    lasso = Lasso(**hp)
-    lasso.fit(omix.features, omix.targets)
+    # (1) Tune hyperparameters
+    self.tune_hyperparameters(omix)
+
+    # (2) Fit model and get importance
+    lasso = self.fit(omix, **kwargs)
     importance = np.abs(lasso.coef_)
 
-    # Show status if necessary
-    if verbose > 0: console.show_status(f'Best hyperparameters: {hp}')
+    if verbose > 1: self.plot_importance(importance, omix.feature_labels)
 
-    # Plot feature importance if required
-    if verbose > 1:
-      import matplotlib.pyplot as plt
-
-      MAX_LEN = 20
-      labels = [f'{label[:MAX_LEN]}' for label in omix.feature_labels]
-      # plt.bar will merge the same labels
-      plt.bar(labels, importance)
-      plt.xticks(rotation=45)
-      plt.grid()
-      plt.title("Lasso Feature Importance")
-      plt.xlabel("Features")
-      plt.ylabel("Importance")
-      plt.ylim(0, 1.2 * max(importance))
-      plt.tight_layout()
-      plt.show()
-
-    # Select features
-    threshold = kwargs.get('threshold', 0.001)
+    # (3) Select features
     indices = np.where(importance > threshold)[0]
     selected_features = omix.features[:, indices]
     labels = np.array(omix.feature_labels)[indices]
@@ -72,3 +47,20 @@ def select_features(omix: Omix, **kwargs):
     return omix.duplicate(features=selected_features, feature_labels=labels)
 
 
+  @staticmethod
+  def plot_importance(importance, labels):
+    import matplotlib.pyplot as plt
+
+    MAX_LEN = 20
+    labels = [f'{label[:MAX_LEN]}' for label in labels]
+
+    # Note that plt.bar will merge the same labels
+    plt.bar(labels, importance)
+    plt.xticks(rotation=45)
+    plt.grid()
+    plt.title("Lasso Feature Importance")
+    plt.xlabel("Features")
+    plt.ylabel("Importance")
+    plt.ylim(0, 1.2 * max(importance))
+    plt.tight_layout()
+    plt.show()

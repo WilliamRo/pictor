@@ -20,6 +20,8 @@ from roma import console
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import warnings
 
 
 
@@ -192,13 +194,13 @@ class FeatureExplorer(Plotter):
 
   def sf_lasso(self, verbose: int=0, n_splits: int=5, strategy: str='grid',
                random_state: int=None, threshold=0.001, min_alpha_exp=-7,
-               max_alpha_exp=1, n_alphas=100, standardize: int=1):
+               max_alpha_exp=1, n_alphas=100, standardize: int=1, n_jobs=10):
     """Feature selection using Lasso regression"""
     hp_space = {'alpha': np.logspace(min_alpha_exp, max_alpha_exp, n_alphas)}
     self.select_features(
       'Lasso', n_splits=n_splits, strategy=strategy, hp_space=hp_space,
       random_state=random_state, threshold=threshold, verbose=verbose,
-      standardize=standardize)
+      standardize=standardize, n_jobs=n_jobs)
 
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
@@ -212,7 +214,33 @@ class FeatureExplorer(Plotter):
 
   # endregion: Feature Selection
 
-  def report(self, report_feature_sum: int = 0, report_stat: int = 1):
+  # region: Machine Learning
+
+  def ml_lr(self, verbose: int=1, warning: int=1, print_cm: int=0,
+            plot_roc: int=0, plot_cm: int=0, cm: int=1, auc: int=1,
+            seed: int=None):
+    """Do binary classification using Logistic Regression.
+
+    Args:
+      verbose: int, 0: show fitting status, 1: show fitting details
+      cm: int, 1: show confusion matrix
+      print_cm: int, 1: print confusion matrix
+      plot_cm: int, 1: plot confusion matrix
+      auc: int, 1: show AUC
+      plot_roc: int, 1: plot ROC curve
+      warning: int, 0: ignore warnings
+      seed: int, random seed
+    """
+    from pictor.xomics.ml.logistic_regression import LogisticRegression
+
+    lr = LogisticRegression(ignore_warnings=warning == 0)
+    lr.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
+                  auc=auc, plot_roc=plot_roc, plot_cm=plot_cm,
+                  random_state=seed)
+
+  # endregion: Machine Learning
+
+  def report(self, report_feature_sum: int=0, report_stat: int=1):
     self.omix.report(report_feature_sum=report_feature_sum,
                      report_stat=report_stat > 0)
 
@@ -240,11 +268,9 @@ class FeatureExplorer(Plotter):
     self.register_a_shortcut(
       'a', lambda: self.flip('statanno'), 'Toggle statanno')
 
-  def list_methods(self):
-    """Below are the methods you can use in FeatureExplorer
+  def ls(self):
+    """Below are misc methods you can use in FeatureExplorer
 
-    MISC Methods
-    ------------
     - cp: cross_plots, plot cross plots
     - cop: correlation_plot, plot correlation matrix
     - mp: multi_plots, plot multiple features at one figure
@@ -252,14 +278,25 @@ class FeatureExplorer(Plotter):
     - sdd: standardize features
     - sort: sort features by p-values
 
-    Features Selection Methods
-    --------------------------
+    - sf: list feature selection methods
+    - ml: list machine learning methods
+    """
+    pass
+
+  def sf(self):
+    """Below are the feature selection methods you can use in FeatureExplorer
+
     - sf_lasso: select features using Lasso regression
     - sf_pca: select features using PCA
     """
     pass
 
-  ls = list_methods
+  def ml(self):
+    """Below are the machine learning methods you can use in FeatureExplorer
+
+    - ml_lr: do binary classification using Logistic Regression
+    """
+    pass
 
   # endregion: Commands
 
@@ -268,8 +305,14 @@ class FeatureExplorer(Plotter):
   @classmethod
   def explore(cls, features=None, targets=None, feature_labels=None,
               target_labels=None, omix=None, title='Feature Explorer',
-              fig_size=(5, 5), auto_show=True):
+              fig_size=(5, 5), auto_show=True, ignore_warnings=False):
     from pictor import Pictor
+
+    # 0. Ignore warnings if required
+    if ignore_warnings:
+      warnings.simplefilter('ignore')
+      os.environ["PYTHONWARNINGS"] = "ignore"
+      console.show_status('Warning Ignored.', prompt='[FE] >>')
 
     # 1. Wrap data
     if omix is None:

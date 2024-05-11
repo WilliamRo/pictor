@@ -13,45 +13,200 @@
 # limitations under the License.
 # ==-=======================================================================-===
 from pictor.xomics.omix import Omix
+from roma import console
 from roma import Nomear
+
+import numpy as np
+import os
+import time
+import warnings
 
 
 
 class MLEngine(Nomear):
 
-  def __init__(self, omix: Omix, random_state=None):
-    self.omix = omix
-    self.random_state = random_state
+  SK_CLASS = None
+  DEFAULT_HP_SPACE = None
+  DEFAULT_HP_MODEL_INIT_KWARGS = {}
 
+  def __init__(self, verbose: int = 0, ignore_warnings=False):
+    # 0. Ignore warnings if required
+    if ignore_warnings:
+      warnings.simplefilter('ignore')
+      os.environ["PYTHONWARNINGS"] = "ignore"
+      console.show_status('Warning Ignored.', prompt='[MLEngine] >>')
 
-  def tune_hyperparameters(self, model, hp_space: dict, n_splits=5,
-                           strategy='grid', verbose=0, **kwargs) -> dict:
-    from sklearn.base import BaseEstimator
+    self.verbose = verbose
+
+  # region: Properties
+
+  @property
+  def best_hp(self): return self.get_from_pocket(
+      'best_hp', key_should_exist=True, local=True)
+
+  @best_hp.setter
+  def best_hp(self, val): self.put_into_pocket(
+    'best_hp', val, exclusive=False, local=True)
+
+  # endregion: Properties
+
+  # region: Hyperparameter Tuning
+
+  def tune_hyperparameters(self, omix: Omix, **kwargs) -> dict:
+    prompt = '[TUNE] >>'
     from sklearn.model_selection import KFold
 
-    # Sanity check
-    assert isinstance(model, BaseEstimator), '!! model must be a sklearn estimator'
+    # (0) get settings
+    random_state = kwargs.get('random_state', None)
 
-    # Search for the best hyperparameters based on cross-validation
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=self.random_state)
+    n_splits = kwargs.get('n_splits', 5)
+    n_jobs = kwargs.get('n_jobs', n_splits)
+    strategy = kwargs.get('strategy', 'grid')
+    hp_space = kwargs.get('hp_space', self.DEFAULT_HP_SPACE)
+    hp_model_init_kwargs = kwargs.get('hp_model_init_kwargs',
+                                      self.DEFAULT_HP_MODEL_INIT_KWARGS)
+
+    verbose = kwargs.get('verbose', self.verbose)
+
+    # (1) Initiate a model
+    model = self.SK_CLASS(**hp_model_init_kwargs)
+
+    # (2) Search for the best hyperparameters based on cross-validation
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
     if strategy in ('grid', 'grid_search'):
       from sklearn.model_selection import GridSearchCV
 
-      search_cv = GridSearchCV(model, hp_space, verbose=verbose, cv=kf)
+      search_cv = GridSearchCV(model, hp_space, verbose=verbose, cv=kf,
+                               n_jobs=n_jobs)
     elif strategy in ('rand', 'random', 'random_search'):
       from sklearn.model_selection import RandomizedSearchCV
 
-      n_iter = kwargs.get('n_iter', 10)
+      n_iter = kwargs.get('n_iter', 10)  # <= Number of iterations
       search_cv = RandomizedSearchCV(
-        model, hp_space, cv=kf, n_iter=n_iter, verbose=verbose)
+        model, hp_space, cv=kf, n_iter=n_iter, verbose=verbose,
+        n_jobs=n_jobs, random_state=random_state)
     else: raise ValueError(f'!! Unknown strategy: {strategy}')
 
-    search_cv.fit(self.omix.features, self.omix.targets)
+    if verbose > 0:
+      console.show_status(f'Tuning hyperparameters using {strategy} search...',
+                          prompt=prompt)
+      console.show_status(
+        f'ConvergenceWarnings may appear if warning is not ignored.',
+        prompt=prompt)
 
-    # Return the best hyperparameters
-    return search_cv.best_params_
+    time_start = time.time()
+    search_cv.fit(omix.features, omix.targets)
+    elapsed_time = time.time() - time_start
+
+    # (3) Return the best hyperparameters
+    self.best_hp = search_cv.best_params_
+    if verbose > 0:
+      console.show_status(f'Best hyperparameters: {self.best_hp}',
+                          prompt=prompt)
+      console.show_status(f'Elapsed time: {elapsed_time:.2f} seconds',
+                          prompt=prompt)
+    return self.best_hp
+
+  # endregion: Hyperparameter Tuning
+
+  # region: Machine Learning
+
+  def fit(self, omix: Omix, **kwargs):
+    # (0) get settings
+    random_state = kwargs.get('random_state', None)
+    hp = kwargs.get('hp', self.best_hp)
+
+    # (1) Initiate model
+    model = self.SK_CLASS(random_state=random_state, **hp)
+
+    # (2) Fit model
+    model.fit(omix.features, omix.targets)
+
+    return model
+
+  def fit_k_fold(self, omix: Omix, **kwargs):
+    prompt = '[K_FOLD_FIT] >>'
+    # (0) Get settings
+    random_state = kwargs.get('random_state', None)
+
+    hp = kwargs.get('hp', None)
+    n_splits = kwargs.get('n_splits', 5)
+
+    verbose = kwargs.get('verbose', self.verbose)
+
+    # (1) Tune hyperparameters if required
+    if hp is None: hp = self.tune_hyperparameters(omix, verbose=verbose)
+
+    # (2) Fit data in k-fold manner
+    if verbose > 0:
+      console.show_status(f'{n_splits}-fold fitting with seed = {random_state}',
+                          prompt=prompt)
+
+    models, prob_list, pred_list = [], [], []
+    k_fold_data, om_whole = omix.get_k_folds(
+      k=n_splits, shuffle=True, random_state=random_state, return_whole=True)
+    for i, (om_train, om_test) in enumerate(k_fold_data):
+      lr = self.fit(om_train, hp=hp)
+
+      prob = lr.predict_proba(om_test.features)
+      pred = lr.predict(om_test.features)
+
+      prob_list.append(prob)
+      pred_list.append(pred)
+      models.append(pred)
+
+    # probabilities.shape = (n_samples, n_classes)
+    probabilities = np.concatenate(prob_list, axis=0)
+    predictions = np.concatenate(pred_list)
+
+    if verbose > 0:
+      console.show_status('Fitting completed.', prompt=prompt)
+
+    # (3) Analyze results if required
+    if kwargs.get('cm', False):
+      from pictor.xomics.evaluation.confusion_matrix import ConfusionMatrix
+
+      cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
+      cm.fill(predictions, om_whole.targets)
+
+      if kwargs.get('print_cm', False):
+        console.show_info(f'Confusion Matrix ({omix.data_name}):')
+        self.print(cm.make_matrix_table())
+
+      console.show_info(f'Evaluation Result ({omix.data_name}):')
+      self.print(cm.make_result_table(decimal=4, class_details=True))
+
+      if kwargs.get('plot_cm', False): cm.sklearn_plot()
+
+    if kwargs.get('auc', False):
+      from pictor.xomics.evaluation.roc import ROC
+
+      # Calculate AUC
+      auc = ROC.calc_auc(probabilities[:, 1], om_whole.targets)
+      console.show_info(f'AUC ({omix.data_name}) = {auc:.3f}')
+
+      if kwargs.get('plot_roc', False):
+        ROC.plot_roc(probabilities[:, 1], om_whole.targets)
+
+    # (-1) Return the fitted models and probabilities
+    return models, probabilities, predictions
+
+  # endregion: Machine Learning
+
+  # region: Results Analysis
 
 
 
+  # endregion: Results Analysis
+
+  # region: MISC
+
+  def print(self, content: str):
+    # roma.console.write_line does not fit cm, this is a workaround
+    from sys import stdout
+    stdout.write("\r{}\n".format(content))
+    stdout.flush()
+
+  # endregion: MISC
 

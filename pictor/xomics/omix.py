@@ -41,6 +41,12 @@ class Omix(Nomear):
 
   # region: Properties
 
+  @property
+  def n_samples(self): return len(self.features)
+
+  @property
+  def n_features(self): return self.features.shape[1]
+
   @Nomear.property()
   def feature_labels(self):
     if self._feature_labels is None:
@@ -106,9 +112,9 @@ class Omix(Nomear):
       omix_reduced = self.duplicate(features=pca.fit_transform(omix.features),
                                     feature_labels=feature_labels)
     elif method in ('lasso', ):
-      from pictor.xomics.ml.lasso import select_features
-
-      omix_reduced = select_features(omix, **kwargs)
+      from pictor.xomics.ml.lasso import Lasso
+      omix_reduced = Lasso(
+        kwargs.get('verbose', 0)).select_features(omix, **kwargs)
     else: raise KeyError(f'!! Unknown feature selecting method "{method}"')
 
     return omix_reduced
@@ -171,6 +177,25 @@ class Omix(Nomear):
     data_name = kwargs.get('data_name', self.data_name)
     return Omix(features, targets, feature_labels, target_labels, data_name)
 
+  def get_k_folds(self, k: int, shuffle=True, random_state=None,
+                  balance_classes=True, return_whole=False):
+    ratios = [1] * k
+    omices = self.split(*ratios, balance_classes=balance_classes,
+                        shuffle=shuffle, random_state=random_state,
+                        data_labels=[f'Fold-{i + 1} Test' for i in range(k)])
+
+    folds = []
+    for i, om_test in enumerate(omices):
+      train_omices = omices.copy()
+      train_omices.pop(i)
+      om_train = Omix.sum(train_omices, data_name=f'Fold-{i + 1} Train')
+      folds.append((om_train, om_test))
+
+    if return_whole:
+      whole = Omix.sum([o for _, o in folds], data_name='Whole')
+      return folds, whole
+    return folds
+
   def split(self, *ratios, data_labels=None, balance_classes=True,
             shuffle=True, random_state=None) -> List['Omix']:
     from sklearn.model_selection import train_test_split
@@ -194,10 +219,8 @@ class Omix(Nomear):
         for om in self.omix_groups:
           om1, om2 = om.split(*ratios, balance_classes=False, shuffle=False)
           om1_list.append(om1), om2_list.append(om2)
-        om1: Omix = sum(om1_list[1:], start=om1_list[0])
-        om2: Omix = sum(om2_list[1:], start=om2_list[0])
-        om1.data_name = data_labels[0]
-        om2.data_name = data_labels[1]
+        om1: Omix = Omix.sum(om1_list, data_name=data_labels[0])
+        om2: Omix = Omix.sum(om2_list, data_name=data_labels[1])
       else:
         # Split data using train_test_split
         X_train, X_test, y_train, y_test = train_test_split(
@@ -224,6 +247,12 @@ class Omix(Nomear):
 
   # region: Overriding
 
+  @staticmethod
+  def sum(omices: List['Omix'], data_name='Sum') -> 'Omix':
+    om = sum(omices[1:], start=omices[0])
+    om.data_name = data_name
+    return om
+
   def __add__(self, other):
     assert isinstance(other, Omix), '!! other must be an instance of Omix'
 
@@ -248,6 +277,11 @@ class Omix(Nomear):
     data_name = f'{self.data_name} x {other.data_name}'
     return Omix(features, self.targets, feature_labels, self.target_labels,
                 data_name)
+
+  def __str__(self):
+    return f'{self.data_name}({self.n_samples}x{self.n_features})'
+
+  def __repr__(self): return str(self)
 
   # endregion: Overriding
 
