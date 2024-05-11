@@ -89,6 +89,8 @@ class MLEngine(Nomear):
     else: raise ValueError(f'!! Unknown strategy: {strategy}')
 
     if verbose > 0:
+      if random_state is not None:
+        console.show_status(f'Random seed set to {random_state}', prompt=prompt)
       console.show_status(f'Tuning hyperparameters using {strategy} search...',
                           prompt=prompt)
       console.show_status(
@@ -136,7 +138,8 @@ class MLEngine(Nomear):
     verbose = kwargs.get('verbose', self.verbose)
 
     # (1) Tune hyperparameters if required
-    if hp is None: hp = self.tune_hyperparameters(omix, verbose=verbose)
+    if hp is None: hp = self.tune_hyperparameters(omix, verbose=verbose,
+                                                  random_state=random_state)
 
     # (2) Fit data in k-fold manner
     if verbose > 0:
