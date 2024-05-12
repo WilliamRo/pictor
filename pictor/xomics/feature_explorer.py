@@ -238,6 +238,11 @@ class FeatureExplorer(Plotter):
                   auc=auc, plot_roc=plot_roc, plot_cm=plot_cm,
                   random_state=seed)
 
+  def ml_svm(self, verbose: int=1, warning: int=1, print_cm: int=0,
+            plot_roc: int=0, plot_cm: int=0, cm: int=1, auc: int=1,
+            seed: int=None):
+    pass
+
   # endregion: Machine Learning
 
   def report(self, report_feature_sum: int=0, report_stat: int=1):
@@ -294,7 +299,10 @@ class FeatureExplorer(Plotter):
   def ml(self):
     """Below are the machine learning methods you can use in FeatureExplorer
 
-    - ml_lr: do binary classification using Logistic Regression
+    - ml_lr: Logistic Regression
+    - ml_svm: Support Vector Machine
+    - ml_dt: Decision Tree
+    - ml_rf: Random Forest
     """
     pass
 

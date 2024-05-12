@@ -27,7 +27,8 @@ class MLEngine(Nomear):
 
   SK_CLASS = None
   DEFAULT_HP_SPACE = None
-  DEFAULT_HP_MODEL_INIT_KWARGS = {}
+  DEFAULT_HP_MODEL_INIT_KWARGS = {'tol': 1e-2}
+  EXTRA_FIT_KWARGS = {}
 
   def __init__(self, verbose: int = 0, ignore_warnings=False):
     # 0. Ignore warnings if required
@@ -68,26 +69,16 @@ class MLEngine(Nomear):
 
     verbose = kwargs.get('verbose', self.verbose)
 
+    # (0.5) Construct hp_space
+    if not isinstance(hp_space, list): hp_space = [hp_space]
+    # Sanity check
+    for hp_dict in hp_space:
+      assert isinstance(hp_dict, dict), '!! hp_space should be a list of dict.'
+
     # (1) Initiate a model
     model = self.SK_CLASS(**hp_model_init_kwargs)
 
     # (2) Search for the best hyperparameters based on cross-validation
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
-
-    if strategy in ('grid', 'grid_search'):
-      from sklearn.model_selection import GridSearchCV
-
-      search_cv = GridSearchCV(model, hp_space, verbose=verbose, cv=kf,
-                               n_jobs=n_jobs)
-    elif strategy in ('rand', 'random', 'random_search'):
-      from sklearn.model_selection import RandomizedSearchCV
-
-      n_iter = kwargs.get('n_iter', 10)  # <= Number of iterations
-      search_cv = RandomizedSearchCV(
-        model, hp_space, cv=kf, n_iter=n_iter, verbose=verbose,
-        n_jobs=n_jobs, random_state=random_state)
-    else: raise ValueError(f'!! Unknown strategy: {strategy}')
-
     if verbose > 0:
       if random_state is not None:
         console.show_status(f'Random seed set to {random_state}', prompt=prompt)
@@ -98,14 +89,40 @@ class MLEngine(Nomear):
         prompt=prompt)
 
     time_start = time.time()
-    search_cv.fit(omix.features, omix.targets)
-    elapsed_time = time.time() - time_start
+
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    # Find the best hyperparameters for each setting
+    searchers = []
+    for hp_dict in hp_space:
+      if strategy in ('grid', 'grid_search'):
+        from sklearn.model_selection import GridSearchCV
+
+        search_cv = GridSearchCV(model, hp_dict, verbose=verbose, cv=kf,
+                                 n_jobs=n_jobs)
+      elif strategy in ('rand', 'random', 'random_search'):
+        from sklearn.model_selection import RandomizedSearchCV
+
+        n_iter = kwargs.get('n_iter', 10)  # <= Number of iterations
+        search_cv = RandomizedSearchCV(
+          model, hp_dict, cv=kf, n_iter=n_iter, verbose=verbose,
+          n_jobs=n_jobs, random_state=random_state)
+      else: raise ValueError(f'!! Unknown strategy: {strategy}')
+
+      search_cv.fit(omix.features, omix.targets)
+      searchers.append(search_cv)
 
     # (3) Return the best hyperparameters
-    self.best_hp = search_cv.best_params_
+    searchers = sorted(searchers, key=lambda x: x.best_score_, reverse=True)
+    best_searcher = searchers[0]
+    self.best_hp = best_searcher.best_params_
     if verbose > 0:
       console.show_status(f'Best hyperparameters: {self.best_hp}',
                           prompt=prompt)
+      console.show_status(f'Best score: {best_searcher.best_score_:.4f}',
+                          prompt=prompt)
+
+      elapsed_time = time.time() - time_start
       console.show_status(f'Elapsed time: {elapsed_time:.2f} seconds',
                           prompt=prompt)
     return self.best_hp
@@ -118,6 +135,8 @@ class MLEngine(Nomear):
     # (0) get settings
     random_state = kwargs.get('random_state', None)
     hp = kwargs.get('hp', self.best_hp)
+
+    hp.update(self.EXTRA_FIT_KWARGS)
 
     # (1) Initiate model
     model = self.SK_CLASS(random_state=random_state, **hp)
