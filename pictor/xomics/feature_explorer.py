@@ -235,7 +235,7 @@ class FeatureExplorer(Plotter):
       auc: int, 1: show AUC
       plot_roc: int, 1: plot ROC curve
       warning: int, 0: ignore warnings
-      mi: int, 0: show misclassified samples
+      mi: int, 0: show misclassified sample indices
       seed: int, random seed
     """
     from pictor.xomics.ml.logistic_regression import LogisticRegression
@@ -252,7 +252,7 @@ class FeatureExplorer(Plotter):
 
     model = ModelClass(ignore_warnings=warning == 0)
     model.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
-                     auc=auc, plot_roc=plot_roc, plot_cm=plot_cm,
+                     auc=auc, plot_roc=plot_roc, plot_cm=plot_cm, mi=mi,
                      random_state=seed)
 
   # endregion: Machine Learning
