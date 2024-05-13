@@ -135,7 +135,8 @@ class MLEngine(Nomear):
   def fit(self, omix: Omix, **kwargs):
     # (0) get settings
     random_state = kwargs.get('random_state', None)
-    hp = kwargs.get('hp', self.best_hp)
+    hp = kwargs.get('hp', None)
+    if hp is None: hp = self.best_hp
 
     hp.update(self.EXTRA_FIT_KWARGS)
 
