@@ -40,3 +40,5 @@ class LogisticRegression(MLEngine):
     'C': np.logspace(-1, 4, 6),
     'l1_ratio': np.linspace(0, 1, 5),
   }
+
+  DEFAULT_HP_MODEL_INIT_KWARGS = {'tol': 1e-2}

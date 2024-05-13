@@ -216,12 +216,18 @@ class FeatureExplorer(Plotter):
 
   # region: Machine Learning
 
-  def ml_lr(self, verbose: int=1, warning: int=1, print_cm: int=0,
-            plot_roc: int=0, plot_cm: int=0, cm: int=1, auc: int=1,
-            seed: int=None):
-    """Do binary classification using Logistic Regression.
+  def ml(self, model, verbose: int = 1, warning: int = 1, print_cm: int = 0,
+         plot_roc: int = 0, plot_cm: int = 0, cm: int = 1, auc: int = 1,
+         seed: int = None):
+    """Below are the machine learning methods you can use in FeatureExplorer
 
     Args:
+      model: str, model name
+        - lr: Logistic Regression Classifier
+        - svm: Support Vector Classifier
+        - dt: Decision Tree Classifier
+        - rf: Random Forest Classifier
+
       verbose: int, 0: show fitting status, 1: show fitting details
       cm: int, 1: show confusion matrix
       print_cm: int, 1: print confusion matrix
@@ -232,16 +238,21 @@ class FeatureExplorer(Plotter):
       seed: int, random seed
     """
     from pictor.xomics.ml.logistic_regression import LogisticRegression
+    from pictor.xomics.ml.support_vector_machine import SupportVectorMachine
+    from pictor.xomics.ml.decision_tree import DecisionTree
+    from pictor.xomics.ml.random_forest import RandomForestClassifier
 
-    lr = LogisticRegression(ignore_warnings=warning == 0)
-    lr.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
-                  auc=auc, plot_roc=plot_roc, plot_cm=plot_cm,
-                  random_state=seed)
+    ModelClass = {
+      'lr': LogisticRegression,
+      'svm': SupportVectorMachine,
+      'dt': DecisionTree,
+      'rf': RandomForestClassifier,
+    }[model]
 
-  def ml_svm(self, verbose: int=1, warning: int=1, print_cm: int=0,
-            plot_roc: int=0, plot_cm: int=0, cm: int=1, auc: int=1,
-            seed: int=None):
-    pass
+    model = ModelClass(ignore_warnings=warning == 0)
+    model.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
+                     auc=auc, plot_roc=plot_roc, plot_cm=plot_cm,
+                     random_state=seed)
 
   # endregion: Machine Learning
 
@@ -296,16 +307,6 @@ class FeatureExplorer(Plotter):
     """
     pass
 
-  def ml(self):
-    """Below are the machine learning methods you can use in FeatureExplorer
-
-    - ml_lr: Logistic Regression
-    - ml_svm: Support Vector Machine
-    - ml_dt: Decision Tree
-    - ml_rf: Random Forest
-    """
-    pass
-
   # endregion: Commands
 
   # region: Public Methods
@@ -351,12 +352,14 @@ if __name__ == '__main__':
     iris.data, iris.target, feature_labels=iris.feature_names,
     target_labels=iris.target_names, title='Iris Explorer', auto_show=auto_show)
 
-  o = fe.omix
-  o.report()
-  print()
+  p.show()
 
-  shuffle = 1
-  o1, o2 = o.split(4, 1, data_labels=['Data_1', 'Data_2'], shuffle=shuffle == 1)
-  o1.report(report_feature_sum=True), o2.report(report_feature_sum=True)
+  # o = fe.omix
+  # o.report()
+  # print()
+  #
+  # shuffle = 1
+  # o1, o2 = o.split(4, 1, data_labels=['Data_1', 'Data_2'], shuffle=shuffle == 1)
+  # o1.report(report_feature_sum=True), o2.report(report_feature_sum=True)
 
 

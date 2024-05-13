@@ -27,10 +27,10 @@ class MLEngine(Nomear):
 
   SK_CLASS = None
   DEFAULT_HP_SPACE = None
-  DEFAULT_HP_MODEL_INIT_KWARGS = {'tol': 1e-2}
+  DEFAULT_HP_MODEL_INIT_KWARGS = {}
   EXTRA_FIT_KWARGS = {}
 
-  def __init__(self, verbose: int = 0, ignore_warnings=False):
+  def __init__(self, verbose: int = 0, ignore_warnings=False, n_jobs=5):
     # 0. Ignore warnings if required
     if ignore_warnings:
       warnings.simplefilter('ignore')
@@ -38,6 +38,7 @@ class MLEngine(Nomear):
       console.show_status('Warning Ignored.', prompt='[MLEngine] >>')
 
     self.verbose = verbose
+    self.n_jobs = n_jobs
 
   # region: Properties
 
@@ -61,7 +62,7 @@ class MLEngine(Nomear):
     random_state = kwargs.get('random_state', None)
 
     n_splits = kwargs.get('n_splits', 5)
-    n_jobs = kwargs.get('n_jobs', n_splits)
+    n_jobs = kwargs.get('n_jobs', self.n_jobs)
     strategy = kwargs.get('strategy', 'grid')
     hp_space = kwargs.get('hp_space', self.DEFAULT_HP_SPACE)
     hp_model_init_kwargs = kwargs.get('hp_model_init_kwargs',
@@ -76,7 +77,7 @@ class MLEngine(Nomear):
       assert isinstance(hp_dict, dict), '!! hp_space should be a list of dict.'
 
     # (1) Initiate a model
-    model = self.SK_CLASS(**hp_model_init_kwargs)
+    model = self.SK_CLASS(random_state=random_state, **hp_model_init_kwargs)
 
     # (2) Search for the best hyperparameters based on cross-validation
     if verbose > 0:
@@ -168,8 +169,11 @@ class MLEngine(Nomear):
     models, prob_list, pred_list = [], [], []
     k_fold_data, om_whole = omix.get_k_folds(
       k=n_splits, shuffle=True, random_state=random_state, return_whole=True)
+
     for i, (om_train, om_test) in enumerate(k_fold_data):
-      lr = self.fit(om_train, hp=hp)
+      if verbose > 3: om_test.report()
+
+      lr = self.fit(om_train, hp=hp, random_state=random_state)
 
       prob = lr.predict_proba(om_test.features)
       pred = lr.predict(om_test.features)
