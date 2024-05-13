@@ -135,7 +135,7 @@ class FeatureExplorer(Plotter):
 
   cp = cross_plots
 
-  def correlation_plot(self, cmap: str='RdBu', show_name: int=1):
+  def correlation_plot(self, show_name: int=1, cmap: str='RdBu'):
     """Plot correlation matrix"""
     # Calculate correlation matrix (consider sorted indices)
     indices = np.array(self.pictor.objects)
@@ -218,7 +218,7 @@ class FeatureExplorer(Plotter):
 
   def ml(self, model, verbose: int = 1, warning: int = 1, print_cm: int = 0,
          plot_roc: int = 0, plot_cm: int = 0, cm: int = 1, auc: int = 1,
-         seed: int = None):
+         mi: int = 0, seed: int = None):
     """Below are the machine learning methods you can use in FeatureExplorer
 
     Args:
@@ -235,6 +235,7 @@ class FeatureExplorer(Plotter):
       auc: int, 1: show AUC
       plot_roc: int, 1: plot ROC curve
       warning: int, 0: ignore warnings
+      mi: int, 0: show misclassified samples
       seed: int, random seed
     """
     from pictor.xomics.ml.logistic_regression import LogisticRegression

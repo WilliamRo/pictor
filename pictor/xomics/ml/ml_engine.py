@@ -154,6 +154,8 @@ class MLEngine(Nomear):
 
     hp = kwargs.get('hp', None)
     n_splits = kwargs.get('n_splits', 5)
+    shuffle = kwargs.get('shuffle', True)
+    mi = kwargs.get('mi', False)
 
     verbose = kwargs.get('verbose', self.verbose)
 
@@ -168,7 +170,7 @@ class MLEngine(Nomear):
 
     models, prob_list, pred_list = [], [], []
     k_fold_data, om_whole = omix.get_k_folds(
-      k=n_splits, shuffle=True, random_state=random_state, return_whole=True)
+      k=n_splits, shuffle=shuffle, random_state=random_state, return_whole=True)
 
     for i, (om_train, om_test) in enumerate(k_fold_data):
       if verbose > 3: om_test.report()
@@ -204,6 +206,17 @@ class MLEngine(Nomear):
       self.print(cm.make_result_table(decimal=4, class_details=True))
 
       if kwargs.get('plot_cm', False): cm.sklearn_plot()
+
+      # Print misclassified sample indices if required
+      if mi:
+        missed_indices_kf = cm.missed_indices
+        missed_indices = [
+          np.argwhere((om_whole.features[i] == omix.features).all(1))[0][0]
+          for i in missed_indices_kf]
+        console.show_status(f'Miss-classified indices ({len(missed_indices)} samples):',
+                            prompt=prompt)
+        missed_indices = sorted(missed_indices)
+        console.supplement(missed_indices, level=2)
 
     if kwargs.get('auc', False):
       from pictor.xomics.evaluation.roc import ROC

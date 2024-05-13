@@ -49,6 +49,7 @@ class ConfusionMatrix(object):
     self.macro_recall, self.weighted_recall = None, None
     self.macro_F1, self.weighted_F1 = None, None
     self.accuracy = None
+    self.missed_indices = None
 
 
   @property
@@ -73,6 +74,8 @@ class ConfusionMatrix(object):
     assert all([preds.size == truths.size, preds.max() < self.num_classes,
                 truths.max() < self.num_classes, ])
     total = preds.size
+
+    self.missed_indices = np.argwhere(preds != truths).ravel()
 
     # Initialize matrix
     cm = np.zeros(shape=[self.num_classes, self.num_classes], dtype=int)
