@@ -213,7 +213,7 @@ class MLEngine(Nomear):
         missed_indices = [
           np.argwhere((om_whole.features[i] == omix.features).all(1))[0][0]
           for i in missed_indices_kf]
-        console.show_status(f'Miss-classified indices ({len(missed_indices)} samples):',
+        console.show_status(f'Miss-classified indices (start from 0, {len(missed_indices)} samples):',
                             prompt=prompt)
         missed_indices = sorted(missed_indices)
         console.supplement(missed_indices, level=2)

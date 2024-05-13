@@ -14,14 +14,36 @@
 # ====-===============================================================-=========
 from pictor.xomics.ml.ml_engine import MLEngine
 from xgboost import XGBClassifier as _XGBClassifier
+# from sklearn.ensemble import GradientBoostingClassifier
+
+import numpy as np
 
 
 
 class XGBClassifier(MLEngine):
+  """ Random forest “bagging” minimizes the variance and overfitting,
+  while GBDT “boosting” minimizes the bias and underfitting.
+
+  While xgboost used a more regularized model formalization to control
+  over-fitting, which gives it better performance.
+
+  The name xgboost, though, actually refers to the engineering goal to push
+  the limit of computations resources for boosted tree algorithms.
+  Which is the reason why many people use xgboost. For model,
+   it might be more suitable to be called as regularized gradient boosting.
+  """
 
   SK_CLASS = _XGBClassifier
+  # SK_CLASS = GradientBoostingClassifier
 
   DEFAULT_HP_SPACE = [
     {
+      'learning_rate': np.logspace(-4, -1, 4),
+      'n_estimators': [
+        # 10,
+        100,
+      ],
+      'max_depth': [4, 6, 8, 10],
+      'subsample': [0.5, 0.75, 1.0],
     },
   ]
