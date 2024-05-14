@@ -39,6 +39,7 @@ class FeatureExplorer(Plotter):
     self.omix = omix
 
     self.new_settable_attr('statanno', True, bool, 'Statistical annotation')
+    self.new_settable_attr('showfliers', False, bool, 'Option to show fliers')
 
   # region: Properties
 
@@ -171,7 +172,7 @@ class FeatureExplorer(Plotter):
     groups = [features[self.targets == i]
               for i, _ in enumerate(self.target_labels)]
 
-    box = ax.boxplot(groups, showfliers=False,
+    box = ax.boxplot(groups, showfliers=self.get('showfliers'),
                      positions=range(len(groups)))
     ax.set_xticklabels(self.target_labels)
     ax.set_title(self.feature_labels[x][:max_title_len])
@@ -240,19 +241,9 @@ class FeatureExplorer(Plotter):
       seed: int, random seed
       sig: int, 0: option to show signature
     """
-    from pictor.xomics.ml.logistic_regression import LogisticRegression
-    from pictor.xomics.ml.support_vector_machine import SupportVectorMachine
-    from pictor.xomics.ml.decision_tree import DecisionTree
-    from pictor.xomics.ml.random_forest import RandomForestClassifier
-    from pictor.xomics.ml.xgboost import XGBClassifier
+    from pictor.xomics.ml import get_model_class
 
-    ModelClass = {
-      'lr': LogisticRegression,
-      'svm': SupportVectorMachine,
-      'dt': DecisionTree,
-      'rf': RandomForestClassifier,
-      'xgb': XGBClassifier,
-    }[model]
+    ModelClass = get_model_class(model)
 
     model = ModelClass(ignore_warnings=warning == 0)
     model.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
@@ -289,6 +280,8 @@ class FeatureExplorer(Plotter):
   def register_shortcuts(self):
     self.register_a_shortcut(
       'a', lambda: self.flip('statanno'), 'Toggle statanno')
+    self.register_a_shortcut(
+      'f', lambda: self.flip('showfliers'), 'Toggle showfliers')
 
   def ls(self):
     """Below are misc methods you can use in FeatureExplorer
