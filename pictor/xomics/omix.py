@@ -115,9 +115,30 @@ class Omix(Nomear):
       from pictor.xomics.ml.lasso import Lasso
       omix_reduced = Lasso(
         kwargs.get('verbose', 0)).select_features(omix, **kwargs)
+    elif method in ('indices', ):
+      indices = kwargs.get('indices', None)
+      omix_reduced = self.get_sub_space(indices)
     else: raise KeyError(f'!! Unknown feature selecting method "{method}"')
 
     return omix_reduced
+
+  def get_sub_space(self, indices, start_from_1=True):
+    """Get sub-space of features by indices.
+    indices can be (1) e.g., '1,2,3', (2) e.g., '1-3', (3) e.g, [1, 2, 3]
+    """
+    if isinstance(indices, str):
+      if '-' in indices:
+        start, end = map(int, indices.split('-'))
+        indices = list(range(start, end + 1))
+      elif ',' in indices:
+        indices = list(map(int, indices.split(',')))
+
+    if start_from_1: indices = [i - 1 for i in indices]
+    indices = np.array(indices)
+
+    return self.duplicate(
+      features=self.features[:, indices],
+      feature_labels=[self.feature_labels[i] for i in indices])
 
   # endregion: Feature Selection
 

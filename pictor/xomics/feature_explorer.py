@@ -281,8 +281,9 @@ class FeatureExplorer(Plotter):
     with self.pictor.busy('Sorting ...'):
       indices = np.argsort(
         [r[0][2] for r in self.omix.single_factor_analysis_reports])
-    self.pictor.objects = indices
+    sorted_omix = self.omix.get_sub_space(indices, start_from_1=False)
     self.refresh()
+    sorted_omix.show_in_explorer(title=f'{self.pictor.static_title} - Sorted')
     return indices
 
   def register_shortcuts(self):
@@ -304,13 +305,13 @@ class FeatureExplorer(Plotter):
     """
     pass
 
-  def sf(self):
+  def sf(self, indices: str):
     """Below are the feature selection methods you can use in FeatureExplorer
 
     - sf_lasso: select features using Lasso regression
     - sf_pca: select features using PCA
     """
-    pass
+    self.select_features('indices', indices=indices)
 
   # endregion: Commands
 
