@@ -218,7 +218,7 @@ class FeatureExplorer(Plotter):
 
   def ml(self, model, verbose: int = 1, warning: int = 1, print_cm: int = 0,
          plot_roc: int = 0, plot_cm: int = 0, cm: int = 1, auc: int = 1,
-         mi: int = 0, seed: int = None):
+         mi: int = 0, seed: int = None, sig: int = 0):
     """Below are the machine learning methods you can use in FeatureExplorer
 
     Args:
@@ -227,6 +227,7 @@ class FeatureExplorer(Plotter):
         - svm: Support Vector Classifier
         - dt: Decision Tree Classifier
         - rf: Random Forest Classifier
+        - xgb: XGBoost Classifier
 
       verbose: int, 0: show fitting status, 1: show fitting details
       cm: int, 1: show confusion matrix
@@ -237,23 +238,26 @@ class FeatureExplorer(Plotter):
       warning: int, 0: ignore warnings
       mi: int, 0: show misclassified sample indices
       seed: int, random seed
+      sig: int, 0: option to show signature
     """
     from pictor.xomics.ml.logistic_regression import LogisticRegression
     from pictor.xomics.ml.support_vector_machine import SupportVectorMachine
     from pictor.xomics.ml.decision_tree import DecisionTree
     from pictor.xomics.ml.random_forest import RandomForestClassifier
+    from pictor.xomics.ml.xgboost import XGBClassifier
 
     ModelClass = {
       'lr': LogisticRegression,
       'svm': SupportVectorMachine,
       'dt': DecisionTree,
       'rf': RandomForestClassifier,
+      'xgb': XGBClassifier,
     }[model]
 
     model = ModelClass(ignore_warnings=warning == 0)
     model.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
                      auc=auc, plot_roc=plot_roc, plot_cm=plot_cm, mi=mi,
-                     random_state=seed)
+                     random_state=seed, show_signature=sig == 1)
 
   # endregion: Machine Learning
 

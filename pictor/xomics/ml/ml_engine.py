@@ -156,7 +156,6 @@ class MLEngine(Nomear):
     hp = kwargs.get('hp', None)
     n_splits = kwargs.get('n_splits', 5)
     shuffle = kwargs.get('shuffle', True)
-    mi = kwargs.get('mi', False)
 
     verbose = kwargs.get('verbose', self.verbose)
 
@@ -193,7 +192,8 @@ class MLEngine(Nomear):
       console.show_status('Fitting completed.', prompt=prompt)
 
     # (3) Analyze results if required
-    if kwargs.get('cm', False):
+    # (3.1) Confusion Matrix
+    if kwargs.get('cm', False) or kwargs.get('mi', False):
       from pictor.xomics.evaluation.confusion_matrix import ConfusionMatrix
 
       cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
@@ -209,7 +209,7 @@ class MLEngine(Nomear):
       if kwargs.get('plot_cm', False): cm.sklearn_plot()
 
       # Print misclassified sample indices if required
-      if mi:
+      if kwargs.get('mi', False):
         missed_indices_kf = cm.missed_indices
         missed_indices = [
           np.argwhere((om_whole.features[i] == omix.features).all(1))[0][0]
@@ -219,6 +219,7 @@ class MLEngine(Nomear):
         missed_indices = sorted(missed_indices)
         console.supplement(missed_indices, level=2)
 
+    # (3.2) AUC and ROC
     if kwargs.get('auc', False):
       from pictor.xomics.evaluation.roc import ROC
 
@@ -228,6 +229,13 @@ class MLEngine(Nomear):
 
       if kwargs.get('plot_roc', False):
         ROC.plot_roc(probabilities[:, 1], om_whole.targets)
+
+    # (3.3) Signature
+    if kwargs.get('show_signature', False):
+      sig: Omix = om_whole.duplicate(
+        features=probabilities[:, 1].reshape(-1, 1),
+        feature_labels=['Signature'])
+      sig.show_in_explorer('Signature')
 
     # (-1) Return the fitted models and probabilities
     return models, probabilities, predictions
