@@ -187,7 +187,7 @@ class Omix(Nomear):
     if omix is None: omix = self
     result = self if update_self else self.duplicate()
     mu, sigma = omix.feature_mean, omix.feature_std
-    result.features = (omix.features - mu) / sigma
+    result.features = (omix.features - mu) / (sigma + 1e-6)
     return result
 
   def duplicate(self, **kwargs) -> 'Omix':
