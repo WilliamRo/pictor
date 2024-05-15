@@ -31,9 +31,11 @@ class Lasso(MLEngine):
     # (0) get settings
     verbose = kwargs.get('verbose', self.verbose)
     threshold = kwargs.get('threshold', 0.001)
+    plot_path = kwargs.get('plot_path', False)
 
     # (1) Tune hyperparameters
-    self.tune_hyperparameters(omix)
+    self.tune_hyperparameters(omix, **kwargs)
+    if plot_path: self.tune_alpha(omix, **kwargs)
 
     # (2) Fit model and get importance
     lasso = self.fit(omix, **kwargs)
@@ -67,3 +69,48 @@ class Lasso(MLEngine):
     plt.ylim(0, 1.2 * max(importance))
     plt.tight_layout()
     plt.show()
+
+
+  def tune_alpha(self, omix: Omix, alphas=DEFAULT_HP_SPACE['alpha'],
+                 **kwargs):
+    from sklearn.linear_model import LassoCV, lasso_path
+    import matplotlib.pyplot as plt
+
+    # (1) Get settings
+    random_state = kwargs.get('random_state', None)
+    n_splits = kwargs.get('n_splits', 5)
+    X, y = omix.features, omix.targets
+
+    # (2) Generate path
+    lasso_cv = LassoCV(alphas=alphas, cv=n_splits, random_state=random_state)
+    lasso_cv.fit(X, y)
+
+    best_alpha = lasso_cv.alpha_
+    self.best_hp['alpha'] = best_alpha
+    if not kwargs.get('plot_path'): return
+
+    # (3) Plot path
+    alphas, coefs, dual_gaps = lasso_path(X, y, alphas=alphas)
+
+    # Set plot style
+    # plt.style.use('ggplot')
+
+    # plt.figure(figsize=(8, 6))
+    log_alphas = np.log(alphas)
+    for coef in coefs: plt.plot(log_alphas, coef, lw=2)
+
+    # Plot the best alpha found by LassoCV
+    plt.axvline(np.log(best_alpha), linestyle='--', color='r',
+                label=f'Best alpha: {best_alpha:.4f}')
+    # ax2 = plt.gca().twinx()
+    # ax2.plot(log_alphas, dual_gaps, ':', color='k', label='Dual Gaps')
+
+    plt.xlabel(r'Log($\alpha$)')
+    plt.ylabel('Features')
+    plt.title('LASSO Paths')
+    plt.grid(True)
+
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+

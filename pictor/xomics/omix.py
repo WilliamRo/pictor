@@ -101,26 +101,28 @@ class Omix(Nomear):
     method = method.lower()
 
     omix = self.standardize() if kwargs.get('standardize', 1) else self
+    save_model = kwargs.get('save_model', False)
 
     if method in ('pca', ):
       from sklearn.decomposition import PCA
 
       n_components = kwargs.get('n_components', 3)
 
-      pca = PCA(n_components=n_components)
+      model = PCA(n_components=n_components)
       feature_labels = [f'PC-{i + 1}' for i in range(n_components)]
-      omix_reduced = self.duplicate(features=pca.fit_transform(omix.features),
+      omix_reduced = self.duplicate(features=model.fit_transform(omix.features),
                                     feature_labels=feature_labels)
-      omix_reduced.put_into_pocket('fs_model', pca, local=True)
     elif method in ('lasso', ):
       from pictor.xomics.ml.lasso import Lasso
-      lasso = Lasso(kwargs.get('verbose', 0))
-      omix_reduced = lasso.select_features(omix, **kwargs)
-      omix_reduced.put_into_pocket('fs_model', lasso, local=True)
+      model = Lasso(kwargs.get('verbose', 0))
+      omix_reduced = model.select_features(omix, **kwargs)
     elif method in ('indices', ):
       indices = kwargs.get('indices', None)
       omix_reduced = self.get_sub_space(indices)
+      model = indices
     else: raise KeyError(f'!! Unknown feature selecting method "{method}"')
+
+    if save_model: omix_reduced.put_into_pocket('sf_method', model, local=True)
 
     return omix_reduced
 

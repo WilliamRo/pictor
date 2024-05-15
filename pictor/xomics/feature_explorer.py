@@ -193,15 +193,16 @@ class FeatureExplorer(Plotter):
     self.select_features('PCA', n_components=n_components,
                          standardize=standardize)
 
-  def sf_lasso(self, verbose: int=0, n_splits: int=5, strategy: str='grid',
-               random_state: int=None, threshold=0.001, min_alpha_exp=-7,
-               max_alpha_exp=1, n_alphas=100, standardize: int=1, n_jobs=10):
+  def sf_lasso(self, verbose: int=0, plot_path: int=0, n_splits: int=5,
+               strategy: str='grid', random_state: int=None, threshold=0.001,
+               min_alpha_exp=-7, max_alpha_exp=1, n_alphas=100,
+               standardize: int=1, n_jobs=10):
     """Feature selection using Lasso regression"""
     hp_space = {'alpha': np.logspace(min_alpha_exp, max_alpha_exp, n_alphas)}
     self.select_features(
       'Lasso', n_splits=n_splits, strategy=strategy, hp_space=hp_space,
       random_state=random_state, threshold=threshold, verbose=verbose,
-      standardize=standardize, n_jobs=n_jobs)
+      standardize=standardize, n_jobs=n_jobs, plot_path=plot_path)
 
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
