@@ -19,25 +19,26 @@ from roma import Nomear
 class ROC(Nomear):
   """Receiver operating characteristic (ROC)."""
 
-  @classmethod
-  def calc_auc(cls, probs, targets, return_fpr_tpr=False):
-    """Calculate the area under the curve (AUC) of the ROC curve.
-    Only works for binary classification with targets in {0, 1}.
-    """
-    from sklearn.metrics import roc_curve, auc
+  def __init__(self, probs, targets):
+    self.probs = probs
+    self.targets = targets
 
-    fpr, tpr, _ = roc_curve(targets, probs)
-    auc = auc(fpr, tpr)
+  @Nomear.property()
+  def roc_curve(self):
+    from sklearn.metrics import roc_curve
+    return roc_curve(self.targets, self.probs)
 
-    if return_fpr_tpr: return auc, fpr, tpr
-    return auc
+  @Nomear.property()
+  def auc(self):
+    from sklearn.metrics import auc
+    fpr, tpr, _ = self.roc_curve
+    return auc(fpr, tpr)
 
-
-  @classmethod
-  def plot_roc(cls, probs, targets):
+  def plot_roc(self):
     import matplotlib.pyplot as plt
 
-    auc, fpr, tpr = cls.calc_auc(probs, targets, return_fpr_tpr=True)
+    fpr, tpr, _ = self.roc_curve
+    auc = self.auc
 
     plt.plot([0, 1], [0, 1], c='grey', alpha=0.5, linestyle='--')
     plt.plot(fpr, tpr)

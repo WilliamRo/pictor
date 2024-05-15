@@ -178,14 +178,14 @@ class MLEngine(Nomear):
     for i, (om_train, om_test) in enumerate(k_fold_data):
       if verbose > 3: om_test.report()
 
-      lr = self.fit(om_train, hp=hp, random_state=random_state)
+      model = self.fit(om_train, hp=hp, random_state=random_state)
 
-      prob = lr.predict_proba(om_test.features)
-      pred = lr.predict(om_test.features)
+      prob = model.predict_proba(om_test.features)
+      pred = model.predict(om_test.features)
 
       prob_list.append(prob)
       pred_list.append(pred)
-      models.append(pred)
+      models.append(model)
 
     # probabilities.shape = (n_samples, n_classes)
     probabilities = np.concatenate(prob_list, axis=0)
@@ -195,50 +195,20 @@ class MLEngine(Nomear):
       console.show_status('Fitting completed.', prompt=prompt)
 
     # (3) Analyze results if required
-    cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
-    cm.fill(predictions, om_whole.targets)
-
-    # (3.1) Confusion Matrix
-    if kwargs.get('cm', False):
-      if kwargs.get('print_cm', False):
-        console.show_info(f'Confusion Matrix ({omix.data_name}):')
-        self.print(cm.make_matrix_table())
-
-      console.show_info(f'Evaluation Result ({omix.data_name}):')
-      self.print(cm.make_result_table(decimal=4, class_details=True))
-
-      if kwargs.get('plot_cm', False): cm.sklearn_plot()
-
-    # (3.2) Print misclassified sample indices if required
-    if kwargs.get('mi', False):
-      missed_indices_kf = cm.missed_indices
-      missed_indices = [
-        np.argwhere((om_whole.features[i] == omix.features).all(1))[0][0]
-        for i in missed_indices_kf]
-      console.show_status(f'Miss-classified indices (start from 0, {len(missed_indices)} samples):',
-                          prompt=prompt)
-      missed_indices = sorted(missed_indices)
-      console.supplement(missed_indices, level=2)
-
-    # (3.2) AUC and ROC
-    auc = ROC.calc_auc(probabilities[:, 1], om_whole.targets)
-    if kwargs.get('auc', False):
-      # Calculate AUC
-      console.show_info(f'AUC ({omix.data_name}) = {auc:.3f}')
-
-      if kwargs.get('plot_roc', False):
-        ROC.plot_roc(probabilities[:, 1], om_whole.targets)
-
-    # (3.3) Signature
-    if kwargs.get('show_signature', False):
-      sig: Omix = om_whole.duplicate(
-        features=probabilities[:, 1].reshape(-1, 1),
-        feature_labels=['Signature'])
-      sig.show_in_explorer('Signature')
+    package = FitPackage.pack(predictions, probabilities, om_whole, models, hp)
+    package.report(print_cm=kwargs.get('print_cm', False),
+                   print_cm_table=kwargs.get('cm', False),
+                   plot_cm=kwargs.get('plot_cm', False),
+                   print_misclassified=kwargs.get('mi', False),
+                   print_auc=kwargs.get('auc', False),
+                   plot_roc=kwargs.get('plot_roc', False),
+                   show_signature=kwargs.get('show_signature', False),
+                   omix=om_whole,
+                   mi_remap=lambda i: np.argwhere(
+                     (om_whole.features[i] == omix.features).all(1))[0][0])
 
     # (-1) Return the fitted models and probabilities
-    return FitPackage(hyper_parameters=hp, models=models, auc=auc,
-                      confusion_matrix=cm, probabilities=probabilities)
+    return package
 
   # endregion: Machine Learning
 
@@ -247,6 +217,114 @@ class MLEngine(Nomear):
   def __str__(self): return str(self.__class__.__name__)
 
   # endregion: Overriding
+
+
+
+class FitPackage(Nomear):
+
+  def __init__(self, hyper_parameters: dict,
+               confusion_matrix: ConfusionMatrix,
+               models: list, roc: ROC,
+               probabilities: np.ndarray):
+    self.hyper_parameters = hyper_parameters
+    self.confusion_matrix: ConfusionMatrix = confusion_matrix
+    self.models = models
+    self.ROC = roc
+    self.probabilities = probabilities
+
+  # region: Properties
+
+  @property
+  def model_name(self): return self.models[0].__str__
+
+  # endregion: Properties
+
+  # region: Overriding
+
+  def __getitem__(self, item):
+    if isinstance(item, str):
+      item_l = item.lower()
+      if item_l in ('macro_f1', 'f1'): return self.confusion_matrix.macro_F1
+      elif item_l in ('acc', 'accuracy'): return self.confusion_matrix.accuracy
+      elif item_l in ('macro_precision', 'precision'):
+        return self.confusion_matrix.macro_precision
+      elif item_l in ('macro_recall', 'recall'):
+        return self.confusion_matrix.macro_recall
+      elif item_l in ('auc', 'roc_auc'): return self.ROC.auc
+      else: raise ValueError(f'!! Unknown key {item}')
+    else: raise ValueError('!! item should be a string.')
+
+  # endregion: Overriding
+
+  # region: Public Methods
+
+  def predict_proba(self, X):
+    return np.mean([model.predict_proba(X) for model in self.models], axis=0)
+
+  def predict(self, X, threshold=0.5):
+    proba = self.predict_proba(X)
+    return (proba[:, 1] > threshold).astype(int)
+
+  def evaluate(self, omix, threshold=0.5) -> 'FitPackage':
+    """Evaluate the performance of the model."""
+    predictions = self.predict(omix.features, threshold=threshold)
+    probabilities = self.predict_proba(omix.features)
+    return FitPackage.pack(predictions, probabilities, omix)
+
+  def report(self, print_cm=True, print_cm_table=True, plot_cm=False,
+             print_misclassified=False, print_auc=True, plot_roc=False,
+             show_signature=False, mi_remap=None, omix=None, prompt='>> '):
+    """Report the evaluation results of the fit package.
+
+    :Args
+    - mi_remap: callable, remap the misclassified indices
+    """
+    # (1) Confusion matrix related
+    cm = self.confusion_matrix
+    if print_cm: self.print(cm.make_matrix_table())
+
+    if print_cm_table:
+      self.print(cm.make_result_table(decimal=4, class_details=True))
+
+    if print_misclassified:
+      missed_indices = cm.missed_indices
+      if callable(mi_remap):
+        missed_indices = [mi_remap(i) for i in missed_indices]
+      console.show_status(f'Miss-classified indices (start from 0, {len(missed_indices)} samples):',
+                          prompt=prompt)
+      missed_indices = sorted(missed_indices)
+      console.supplement(missed_indices, level=2)
+
+    if plot_cm: cm.sklearn_plot()
+
+    # (2) ROC related
+    if print_auc:
+      console.show_info(f'AUC = {self.ROC.auc:.3f}')
+
+    if plot_roc: self.ROC.plot_roc()
+
+    # (3) Signature related
+    if show_signature:
+      assert isinstance(omix, Omix), '!! omix should be provided for signature.'
+      sig: Omix = omix.duplicate(
+        features=self.probabilities[:, 1].reshape(-1, 1),
+        feature_labels=['Signature'])
+      sig.show_in_explorer('Signature')
+
+  @classmethod
+  def pack(cls, predictions, probabilities, omix: Omix,
+           models=(), hp={}) -> 'FitPackage':
+    """Construct a FitPackage from an Omix object."""
+    cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
+    cm.fill(predictions, omix.targets)
+
+    roc = ROC(probabilities[:, 1], omix.targets)
+
+    package = FitPackage(hyper_parameters=hp, models=models, roc=roc,
+                         confusion_matrix=cm, probabilities=probabilities)
+    return package
+
+  # endregion: Public Methods
 
   # region: MISC
 
@@ -258,33 +336,3 @@ class MLEngine(Nomear):
 
   # endregion: MISC
 
-
-
-class FitPackage(Nomear):
-
-  def __init__(self, hyper_parameters: dict,
-               confusion_matrix: ConfusionMatrix,
-               models: list, auc: float,
-               probabilities: np.ndarray):
-    self.hyper_parameters = hyper_parameters
-    self.confusion_matrix = confusion_matrix
-    self.models = models
-    self.AUC = auc
-    self.probabilities = probabilities
-
-
-  @property
-  def model_name(self): return self.models[0].__str__
-
-  def __getitem__(self, item):
-    if isinstance(item, str):
-      item_l = item.lower()
-      if item_l in ('macro_f1', 'f1'): return self.confusion_matrix.macro_F1
-      elif item_l in ('acc', 'accuracy'): return self.confusion_matrix.accuracy
-      elif item_l in ('macro_precision', 'precision'):
-        return self.confusion_matrix.macro_precision
-      elif item_l in ('macro_recall', 'recall'):
-        return self.confusion_matrix.macro_recall
-      elif item_l in ('auc', 'roc_auc'): return self.AUC
-      else: raise ValueError(f'!! Unknown key {item}')
-    else: raise ValueError('!! item should be a string.')
