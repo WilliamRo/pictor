@@ -41,6 +41,8 @@ class ConfusionMatrix(object):
       check_type(class_names, str)
 
     # Variables to be filled
+    self.predictions, self.targets = None, None
+
     self.support, self.total = None, None
     self.confusion_matrix = None
     self.TPs, self.TNs, self.FPs, self.FNs = None, None, None, None
@@ -75,6 +77,8 @@ class ConfusionMatrix(object):
                 truths.max() < self.num_classes, ])
     total = preds.size
 
+    self.predictions = preds
+    self.targets = truths
     self.missed_indices = np.argwhere(preds != truths).ravel()
 
     # Initialize matrix

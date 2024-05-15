@@ -11,53 +11,62 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ===-=======================================================================-==
+# ====-====================================================================-====
+from collections import OrderedDict
 from pictor.xomics.omix import Omix
 from roma import console
 from roma import Nomear
-from roma import io
 
 import os
 import warnings
+import numpy as np
 
 
 
-class RepeatEvaluator(Nomear):
-  """Repeat evaluation for machine learning models.
-
-  Report format:
-  rer = [
-
-  ]
+class Pipeline(Nomear):
+  """Omix-based pipeline for feature selection, fitting, and evaluation.
   """
+  prompt = '[PIPELINE] >>'
 
   def __init__(self, omix: Omix, ignore_warnings=False):
     # 0. Ignore warnings if required
     if ignore_warnings:
       warnings.simplefilter('ignore')
       os.environ["PYTHONWARNINGS"] = "ignore"
-      console.show_status('Warning Ignored.', prompt='[RER] >>')
+      console.show_status('Warning Ignored.', prompt=self.prompt)
 
-    self.omix = omix
+    self.omix: Omix = omix
 
   # region: Properties
 
-  @Nomear.property(local=True)
-  def sub_space_omices(self): return []
+  @property
+  def sub_space_dict(self) -> OrderedDict:
+    """Format: {('method_key', (('arg1', val1), ('arg2', val2), ...)):
+       [omix_1, omix_2, ...], ...}"""
+    return self.omix.get_from_pocket(
+      'pp::sub_space_dict::24ma14',
+      initializer=lambda: OrderedDict(), local=True)
 
-  @Nomear.property()
-  def learners(self): return []
+  @property
+  def sub_spaces(self) -> list:
+    spaces = []
+    for _, omices in self.sub_space_dict.items(): spaces.extend(omices)
+    return spaces
 
   # endregion: Properties
 
   # region: Feature Selection
 
-  def create_sub_feature_space(self, method: str, repeats=1,
-                               show_progress=0, **kwargs):
+  def create_sub_space(self, method: str, repeats=1,
+                       show_progress=0, **kwargs):
     method = method.lower()
     prompt = '[FEATURE SELECTION] >>'
 
     if method == 'pca': assert repeats == 1, "Repeat PCA makes no sense."
+
+    # Initialize bag if not exists
+    key = (method, tuple(sorted(tuple(kwargs.items()), key=lambda x: x[0])))
+    if key not in self.sub_space_dict: self.sub_space_dict[key] = []
 
     if show_progress: console.show_status(
       f'Creating sub-feature space using `{method}` ...', prompt=prompt)
@@ -65,7 +74,8 @@ class RepeatEvaluator(Nomear):
     for i in range(repeats):
       if show_progress: console.print_progress(i, repeats)
       omix_sub = self.omix.select_features(method, **kwargs)
-      self.sub_space_omices.append(omix_sub)
+
+      self.sub_space_dict[key].append(omix_sub)
 
     if show_progress: console.show_status(
       f'{repeats} sub-feature spaces created.', prompt=prompt)
@@ -74,40 +84,95 @@ class RepeatEvaluator(Nomear):
 
   # region: Fitting
 
+  def fit_traverse_spaces(self, model: str, repeats=1,
+                          show_progress=0, **kwargs):
+    from pictor.xomics.ml import get_model_class
+    from pictor.xomics.ml.ml_engine import MLEngine
 
+    # (0) Get settings
+    prompt = '[PP_FIT] >>'
+    verbose = kwargs.get('verbose', 0)
+
+    # (1) Initiate a model
+    ModelClass = get_model_class(model)
+    model: MLEngine = ModelClass()
+
+    # (2) Traverse
+    sub_spaces = self.sub_spaces
+    N = len(sub_spaces)
+    if show_progress: console.show_status(
+      f'Traverse through {N} subspaces (repeat={repeats}) using {model} ...',
+      prompt=prompt)
+
+    for i, omix in enumerate(sub_spaces):
+      if show_progress: console.print_progress(i, N)
+
+      pkg_dict = self.get_fit_packages(omix)
+      model_name = str(model)
+      if model_name not in pkg_dict: pkg_dict[model_name] = []
+
+      # (2.1) tune hyper-parameters
+      hp = model.tune_hyperparameters(omix, verbose=verbose)
+
+      # (2.2) Repeatedly fit model on omix
+      for _ in range(repeats):
+        pkg = model.fit_k_fold(omix, hp=hp, **kwargs)
+        pkg_dict[model_name].append(pkg)
+
+    if show_progress: console.show_status(
+      f'Traversed through {N} subspaces for {repeats} times.', prompt=prompt)
 
   # endregion: Fitting
 
   # region: Public Methods
 
-  def eval_reduce_fit(self,
-                      reduce_method: dict=None,
-                      fitting_method: dict=None,
-                      reduce_repeats=1,
-                      fitting_repeats=1,
-                      **kwargs):
-    """Repeatedly evaluate a given `reduce -> fit` pipline.
+  def get_fit_packages(self, omix: Omix) -> OrderedDict:
+    """Format: {'model_name': [pkg_1, pkg_2, ...], ...}"""
+    return omix.get_from_pocket(
+      'pp::fit_packages::24ma14', initializer=lambda: OrderedDict(), local=True)
 
-    reduce_method example:
-      -
+  def get_pkg_matrix(self):
+    row_labels, col_labels, matrix_dict = [], [], {}
 
-    """
-    # (1) Select features for `reduce_repeats` times
-    reduced_omices = []
-    if reduce_method is None: reduced_omices.append(self)
-    else:
-      pass
+    # For each sub-space
+    for key, omix_list in self.sub_space_dict.items():
+      sf_key = key[0]
+      # Register sf_key if not exists
+      if sf_key not in row_labels: row_labels.append(sf_key)
+
+      for omix in omix_list:
+        pkg_dict: OrderedDict = self.get_fit_packages(omix)
+        for ml_key, pkg_list in pkg_dict.items():
+          # Register ml_key if not exists
+          if ml_key not in col_labels: col_labels.append(ml_key)
+
+          mat_key = (sf_key, ml_key)
+          # Register mat_key if not exists
+          if mat_key not in matrix_dict: matrix_dict[mat_key] = []
+
+          matrix_dict[mat_key].extend(pkg_list)
+
+    return row_labels, col_labels, matrix_dict
+
+  def report(self, metrics=('AUC', 'F1')):
+    import scipy.stats as st
+
+    row_labels, col_labels, matrix_dict = self.get_pkg_matrix()
+    for sf_key in row_labels:
+      console.show_info(f'Feature selection method: {sf_key}')
+      for ml_key in col_labels:
+        console.supplement(f'Model: {ml_key}', level=2)
+        pkg_list = matrix_dict[(sf_key, ml_key)]
+        n_pkg = len(pkg_list)
+
+        for key in metrics:
+          values = [p[key] for p in pkg_list]
+          mu = np.mean(values)
+          CI1, CI2 = st.t.interval(0.95, n_pkg-1, loc=mu, scale=st.sem(values))
+          info = f'Avg({key}) over {n_pkg} trials: {mu:.3f}'
+          info += f', CI95% = [{CI1:.3f}, {CI2:.3f}]'
+          console.supplement(info, level=3)
+
+    print('-' * 79)
 
   # endregion: Public Methods
-
-  # region: IO
-
-  @staticmethod
-  def load(file_path: str, verbose=True):
-    return io.load_file(file_path, verbose=verbose)
-
-  def save(self, file_path: str, verbose=True):
-    if not file_path.endswith('.rer'): file_path += '.rer'
-    return io.save_file(self, file_path, verbose=verbose)
-
-  # endregion: IO
