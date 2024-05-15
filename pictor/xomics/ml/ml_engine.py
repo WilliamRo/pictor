@@ -195,6 +195,7 @@ class MLEngine(Nomear):
       console.show_status('Fitting completed.', prompt=prompt)
 
     # (3) Analyze results if required
+    if not kwargs.get('save_models', False): models = ()
     package = FitPackage.pack(predictions, probabilities, om_whole, models, hp)
     package.report(print_cm=kwargs.get('print_cm', False),
                    print_cm_table=kwargs.get('cm', False),

@@ -111,10 +111,12 @@ class Omix(Nomear):
       feature_labels = [f'PC-{i + 1}' for i in range(n_components)]
       omix_reduced = self.duplicate(features=pca.fit_transform(omix.features),
                                     feature_labels=feature_labels)
+      omix.put_into_pocket('fs_model', pca, local=True)
     elif method in ('lasso', ):
       from pictor.xomics.ml.lasso import Lasso
-      omix_reduced = Lasso(
-        kwargs.get('verbose', 0)).select_features(omix, **kwargs)
+      lasso = Lasso(kwargs.get('verbose', 0))
+      omix_reduced = lasso.select_features(omix, **kwargs)
+      omix.put_into_pocket('fs_model', lasso, local=True)
     elif method in ('indices', ):
       indices = kwargs.get('indices', None)
       omix_reduced = self.get_sub_space(indices)

@@ -28,7 +28,7 @@ class Pipeline(Nomear):
   """
   prompt = '[PIPELINE] >>'
 
-  def __init__(self, omix: Omix, ignore_warnings=False):
+  def __init__(self, omix: Omix, ignore_warnings=False, save_models=False):
     # 0. Ignore warnings if required
     if ignore_warnings:
       warnings.simplefilter('ignore')
@@ -36,6 +36,7 @@ class Pipeline(Nomear):
       console.show_status('Warning Ignored.', prompt=self.prompt)
 
     self.omix: Omix = omix
+    self.save_models = save_models
 
   # region: Properties
 
@@ -57,7 +58,7 @@ class Pipeline(Nomear):
 
   # region: Feature Selection
 
-  def create_sub_space(self, method: str, repeats=1,
+  def create_sub_space(self, method: str='*', repeats=1,
                        show_progress=0, **kwargs):
     method = method.lower()
     prompt = '[FEATURE SELECTION] >>'
@@ -73,7 +74,8 @@ class Pipeline(Nomear):
 
     for i in range(repeats):
       if show_progress: console.print_progress(i, repeats)
-      omix_sub = self.omix.select_features(method, **kwargs)
+      if method == '*': omix_sub = self.omix
+      else: omix_sub = self.omix.select_features(method, **kwargs)
 
       self.sub_space_dict[key].append(omix_sub)
 
@@ -116,7 +118,8 @@ class Pipeline(Nomear):
 
       # (2.2) Repeatedly fit model on omix
       for _ in range(repeats):
-        pkg = model.fit_k_fold(omix, hp=hp, **kwargs)
+        pkg = model.fit_k_fold(omix, hp=hp, save_models=self.save_models,
+                               **kwargs)
         pkg_dict[model_name].append(pkg)
 
     if show_progress: console.show_status(
@@ -157,6 +160,7 @@ class Pipeline(Nomear):
   def report(self, metrics=('AUC', 'F1')):
     import scipy.stats as st
 
+    console.section('Pipeline Report')
     row_labels, col_labels, matrix_dict = self.get_pkg_matrix()
     for sf_key in row_labels:
       console.show_info(f'Feature selection method: {sf_key}')
