@@ -29,9 +29,9 @@ class SupportVectorMachine(MLEngine):
       'kernel': ['linear'],
     },
     {
-      'C': np.logspace(-1, 3, 5),
+      'C': np.logspace(-1, 3, 3),
       'kernel': ['poly', 'rbf', 'sigmoid'],
-      'gamma': np.logspace(-4, 1, 6),
+      'gamma': np.logspace(-4, 1, 4),
     },
   ]
 
