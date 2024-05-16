@@ -162,6 +162,9 @@ class MLEngine(Nomear):
 
     verbose = kwargs.get('verbose', self.verbose)
 
+    if verbose > 0:
+      console.section(f'K-Fold fitting using {self}')
+
     # (1) Tune hyperparameters if required
     if hp is None: hp = self.tune_hyperparameters(omix, verbose=verbose,
                                                   random_state=random_state)
@@ -212,6 +215,50 @@ class MLEngine(Nomear):
     return package
 
   # endregion: Machine Learning
+
+  # region: MISC
+
+  def plot_learning_curve(self, omix: Omix, **kwargs):
+    from sklearn.model_selection import LearningCurveDisplay, ShuffleSplit
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # Get settings
+    random_state = kwargs.get('random_state', None)
+    n_splits = kwargs.get('n_splits', 5)
+
+    hp = kwargs.get('hp', None)
+    if hp is None:
+      if not self.in_pocket('best_hp'):
+        self.tune_hyperparameters(omix, **kwargs)
+      hp = self.best_hp
+
+    cv = ShuffleSplit(n_splits=n_splits,
+                      test_size=0.2,
+                      random_state=random_state)
+
+    common_params = {
+      "X": omix.features,
+      "y": omix.targets,
+      "train_sizes": np.linspace(0.1, 1.0, 10),
+      "cv": cv,
+      "score_type": "both",
+      # "n_jobs": 4,
+      "line_kw": {"marker": "o"},
+      "std_display_style": "fill_between",
+      "score_name": "Accuracy",
+    }
+
+    model = self.SK_CLASS(**hp)
+    LearningCurveDisplay.from_estimator(model, **common_params)
+    ax = plt.gca()
+    handles, label = ax.get_legend_handles_labels()
+    ax.legend(handles[:2], ["Training Score", "Test Score"])
+    ax.set_title(f"Learning Curve for {self}")
+    plt.show()
+
+  # endregion: MISC
 
   # region: Overriding
 

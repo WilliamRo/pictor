@@ -93,6 +93,9 @@ class Omix(Nomear):
   @Nomear.property()
   def corr_matrix(self): return np.corrcoef(self.features, rowvar=False)
 
+  @property
+  def sf_method(self): return self.get_from_pocket('sf_method')
+
   # endregion: Properties
 
   # region: Feature Selection

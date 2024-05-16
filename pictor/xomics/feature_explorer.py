@@ -196,13 +196,14 @@ class FeatureExplorer(Plotter):
   def sf_lasso(self, verbose: int=0, plot_path: int=0, n_splits: int=5,
                strategy: str='grid', random_state: int=None, threshold=0.001,
                min_alpha_exp=-7, max_alpha_exp=1, n_alphas=100,
-               standardize: int=1, n_jobs=10):
+               standardize: int=1, n_jobs=10, save_model: int=0):
     """Feature selection using Lasso regression"""
     hp_space = {'alpha': np.logspace(min_alpha_exp, max_alpha_exp, n_alphas)}
     self.select_features(
       'Lasso', n_splits=n_splits, strategy=strategy, hp_space=hp_space,
       random_state=random_state, threshold=threshold, verbose=verbose,
-      standardize=standardize, n_jobs=n_jobs, plot_path=plot_path)
+      standardize=standardize, n_jobs=n_jobs, plot_path=plot_path,
+      save_model=save_model)
 
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
@@ -220,7 +221,7 @@ class FeatureExplorer(Plotter):
 
   def ml(self, model, verbose: int = 1, warning: int = 1, print_cm: int = 0,
          plot_roc: int = 0, plot_cm: int = 0, cm: int = 1, auc: int = 1,
-         mi: int = 0, seed: int = None, sig: int = 0):
+         mi: int = 0, seed: int = None, sig: int = 0, lc: int = 0):
     """Below are the machine learning methods you can use in FeatureExplorer
 
     Args:
@@ -241,12 +242,17 @@ class FeatureExplorer(Plotter):
       mi: int, 0: show misclassified sample indices
       seed: int, random seed
       sig: int, 0: option to show signature
+      lc: int, 0: option to show learning curve
     """
     from pictor.xomics.ml import get_model_class
 
     ModelClass = get_model_class(model)
 
     model = ModelClass(ignore_warnings=warning == 0)
+    if lc:
+      model.plot_learning_curve(self.omix, verbose=verbose)
+      return
+
     model.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
                      auc=auc, plot_roc=plot_roc, plot_cm=plot_cm, mi=mi,
                      random_state=seed, show_signature=sig == 1)
@@ -337,6 +343,15 @@ class FeatureExplorer(Plotter):
 
     if auto_show: p.show()
     return p, fe
+
+  def save(self):
+    """Save the current omix object"""
+    import tkinter as tk
+
+    file_path = tk.filedialog.asksaveasfilename(
+      title='Save as', filetypes=[('OMIX files', '*.omix')])
+
+    if file_path is not None: self.omix.save(file_path, verbose=True)
 
   # endregion: Public Methods
 
