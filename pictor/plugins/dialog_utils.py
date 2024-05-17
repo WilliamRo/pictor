@@ -23,3 +23,8 @@ class DialogUtilities(object):
   def load_file_dialog(title):
     from tkinter.filedialog import askopenfilename
     return askopenfilename(title=title)
+
+  @staticmethod
+  def select_folder_dialog(title):
+    from tkinter.filedialog import askdirectory
+    return askdirectory(title=title)

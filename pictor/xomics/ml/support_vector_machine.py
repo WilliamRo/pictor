@@ -29,10 +29,12 @@ class SupportVectorMachine(MLEngine):
       'kernel': ['linear'],
     },
     {
-      'C': np.logspace(-1, 3, 3),
+      'C': np.logspace(-1, 3, 5),
       'kernel': ['poly', 'rbf', 'sigmoid'],
-      'gamma': np.logspace(-4, 1, 4),
+      'gamma': np.logspace(-4, 1, 6),
     },
   ]
 
   EXTRA_FIT_KWARGS = {'probability': True}
+
+  DEFAULT_HP_MODEL_INIT_KWARGS = {'max_iter': 10000}
