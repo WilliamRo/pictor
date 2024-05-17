@@ -194,9 +194,10 @@ class FeatureExplorer(Plotter):
                          standardize=standardize)
 
   def sf_lasso(self, verbose: int=0, plot_path: int=0, n_splits: int=5,
-               strategy: str='grid', random_state: int=None, threshold=0.001,
-               min_alpha_exp=-7, max_alpha_exp=1, n_alphas=100,
-               standardize: int=1, n_jobs=10, save_model: int=0):
+               strategy: str='grid', random_state: int=None,
+               threshold: float=0.001, min_alpha_exp: int=-7,
+               max_alpha_exp: int=1, n_alphas: int=100, standardize: int=1,
+               n_jobs:int =10, save_model: int=0):
     """Feature selection using Lasso regression"""
     hp_space = {'alpha': np.logspace(min_alpha_exp, max_alpha_exp, n_alphas)}
     self.select_features(

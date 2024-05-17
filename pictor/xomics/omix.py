@@ -28,7 +28,7 @@ class Omix(Nomear):
                target_labels=None, data_name='Omix'):
     """features.shape = [n_samples, n_features]"""
     self.features = features
-    self.targets = targets
+    self.targets = np.array(targets)
 
     # Sanity check
     assert len(features) == len(targets), '!! features and targets must have the same length'
