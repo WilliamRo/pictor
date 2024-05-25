@@ -150,7 +150,8 @@ class FeatureExplorer(Plotter):
     if show_name:
       ticks = np.arange(len(self.feature_labels))
       feature_labels = [self.feature_labels[i] for i in indices]
-      ax.set_xticks(ticks=ticks, labels=feature_labels, rotation=45)
+      ax.set_xticks(ticks=ticks, labels=feature_labels)
+      fig.autofmt_xdate(rotation=45)
       ax.set_yticks(ticks=ticks, labels=feature_labels)
     else:
       ax.set_xticks([])
@@ -284,6 +285,26 @@ class FeatureExplorer(Plotter):
     sorted_omix.show_in_explorer(title=f'{self.pictor.static_title} - Sorted')
     return indices
 
+  def find(self, key: str):
+    """Find next feature by name"""
+    current_index = self.pictor.cursors[self.pictor.Keys.OBJECTS]
+
+    labels = [s.lower() for s in self.omix.feature_labels]
+    labels = labels[current_index + 1:] + labels[:current_index + 1]
+
+    key = key.lower()
+    for i in range(len(labels)):
+      if key in labels[i]:
+        self.pictor.set_object_cursor((i + 2 + current_index) % len(labels))
+        self.refresh()
+        return
+    console.show_status(f'No feature found with key `{key}`.')
+
+  def filter_by_name(self, key: str):
+    omix = self.omix.filter_by_name([key])
+    omix.show_in_explorer()
+  fbn = filter_by_name
+
   def register_shortcuts(self):
     self.register_a_shortcut(
       'a', lambda: self.flip('statanno'), 'Toggle statanno')
@@ -295,6 +316,8 @@ class FeatureExplorer(Plotter):
 
     - cp: cross_plots, plot cross plots
     - cop: correlation_plot, plot correlation matrix
+    - fbn: filter_by_name, filter features by name
+    - find: find next feature by name
     - mp: multi_plots, plot multiple features at one figure
     - report: report omix details
     - sdd: standardize features

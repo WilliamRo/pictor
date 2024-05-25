@@ -147,6 +147,18 @@ class Omix(Nomear):
       features=self.features[:, indices],
       feature_labels=[self.feature_labels[i] for i in indices])
 
+  def filter_by_name(self, keywords: List[str]):
+    """Filter features by keywords in feature_labels"""
+    if not isinstance(keywords, list): keywords = [keywords]
+
+    indices = []
+    for i, label in enumerate(self.feature_labels):
+      for key in keywords:
+        if key.lower() in label.lower():
+          indices.append(i)
+          continue
+    return self.get_sub_space(indices, start_from_1=False)
+
   # endregion: Feature Selection
 
   # region: Visualization
