@@ -77,7 +77,7 @@ class FeatureExplorer(Plotter):
       indices = list(map(int, indices.split(',')))
 
     N = len(indices)
-    cols = (N + 1) // rows
+    cols = (N + 1) // rows if rows > 1 else N
     fig, axes = plt.subplots(rows, cols, figsize=(10, 6))
     for i, ax in zip(indices, axes.flatten()):
       self.plot(self.pictor.objects[i - 1], ax,
