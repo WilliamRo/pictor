@@ -151,9 +151,9 @@ class Omix(Nomear):
 
   # region: Visualization
 
-  def show_in_explorer(self, title='Omix'):
+  def show_in_explorer(self, title='Omix', fig_size=(5, 5)):
     from pictor.xomics import FeatureExplorer
-    FeatureExplorer.explore(omix=self, title=title)
+    FeatureExplorer.explore(omix=self, title=title, fig_size=fig_size)
 
   # endregion: Visualization
 
