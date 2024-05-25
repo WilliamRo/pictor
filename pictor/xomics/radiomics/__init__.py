@@ -11,30 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ===-=========================================================================-
-from pictor.xomics.ml.ml_engine import MLEngine
-from sklearn import svm
-
-import numpy as np
-
-
-
-class SupportVectorMachine(MLEngine):
-
-  SK_CLASS = svm.SVC
-
-  DEFAULT_HP_SPACE = [
-    {
-      'C': np.logspace(-1, 3, 5),
-      'kernel': ['linear'],
-    },
-    {
-      'C': np.logspace(-1, 3, 5),
-      'kernel': ['poly', 'rbf', 'sigmoid'],
-      'gamma': np.logspace(-4, 1, 6),
-    },
-  ]
-
-  EXTRA_FIT_KWARGS = {'probability': True}
-
-  DEFAULT_HP_MODEL_INIT_KWARGS = {'max_iter': 10000}
+# ======-=======================================================-===============

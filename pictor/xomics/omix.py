@@ -28,7 +28,7 @@ class Omix(Nomear):
                target_labels=None, data_name='Omix'):
     """features.shape = [n_samples, n_features]"""
     self.features = features
-    self.targets = targets
+    self.targets = np.array(targets)
 
     # Sanity check
     assert len(features) == len(targets), '!! features and targets must have the same length'
@@ -163,9 +163,9 @@ class Omix(Nomear):
 
   # region: Visualization
 
-  def show_in_explorer(self, title='Omix'):
+  def show_in_explorer(self, title='Omix', fig_size=(5, 5)):
     from pictor.xomics import FeatureExplorer
-    FeatureExplorer.explore(omix=self, title=title)
+    FeatureExplorer.explore(omix=self, title=title, fig_size=fig_size)
 
   # endregion: Visualization
 
