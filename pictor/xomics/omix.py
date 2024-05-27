@@ -24,7 +24,7 @@ import numpy as np
 
 class Omix(Nomear):
 
-  def __init__(self, features, targets, feature_labels=None,
+  def __init__(self, features, targets, feature_labels=None, sample_labels=None,
                target_labels=None, data_name='Omix'):
     """features.shape = [n_samples, n_features]"""
     self.features = features
@@ -38,6 +38,7 @@ class Omix(Nomear):
     self._target_labels = target_labels
     self.data_name = data_name
 
+    self.set_sample_labels(sample_labels)
 
   # region: Properties
 
@@ -52,6 +53,10 @@ class Omix(Nomear):
     if self._feature_labels is None:
       return [f'feature-{i + 1}' for i in range(self.features.shape[1])]
     return self._feature_labels
+
+  @Nomear.property(local=True)
+  def sample_labels(self):
+    return np.array([f'{i + 1}' for i in range(self.n_samples)])
 
   @Nomear.property()
   def target_labels(self):
@@ -68,7 +73,8 @@ class Omix(Nomear):
   def omix_groups(self):
     """Returns omix objects for each group"""
     return [self.duplicate(features=self.features[group],
-                           targets=self.targets[group])
+                           targets=self.targets[group],
+                           sample_labels=self.sample_labels[group])
             for group in self.groups]
 
   @Nomear.property()
@@ -191,6 +197,13 @@ class Omix(Nomear):
 
   # region: Public Methods
 
+  def set_sample_labels(self, sample_labels):
+    if sample_labels is None:
+      sample_labels = np.array(
+        [f'{i + 1}' for i in range(self.n_samples)])
+    assert len(sample_labels) == self.n_samples
+    self.put_into_pocket('sample_labels', sample_labels, exclusive=False)
+
   def report(self, **kwargs):
     console.show_info(f'Details of `{self.data_name}`:')
     console.supplement(f'Features shape = {self.features.shape}')
@@ -218,12 +231,13 @@ class Omix(Nomear):
     return result
 
   def duplicate(self, **kwargs) -> 'Omix':
-    features = kwargs.get('features', self.features.copy())
-    targets = kwargs.get('targets', self.targets.copy())
-    feature_labels = kwargs.get('feature_labels', self._feature_labels)
-    target_labels = kwargs.get('target_labels', self._target_labels)
-    data_name = kwargs.get('data_name', self.data_name)
-    return Omix(features, targets, feature_labels, target_labels, data_name)
+    return Omix(
+      features=kwargs.get('features', self.features.copy()),
+      targets=kwargs.get('targets', self.targets.copy()),
+      feature_labels=kwargs.get('feature_labels', self._feature_labels),
+      sample_labels=kwargs.get('sample_labels', self.sample_labels),
+      target_labels=kwargs.get('target_labels', self._target_labels),
+      data_name=kwargs.get('data_name', self.data_name))
 
   def get_k_folds(self, k: int, shuffle=True, random_state=None,
                   balance_classes=True, return_whole=False):
@@ -254,7 +268,7 @@ class Omix(Nomear):
     assert len(ratios) == len(data_labels), '!! ratios and data_labels must have the same length'
     assert len(ratios) > 1, '!! At least two splits are required'
 
-    X, y = self.features, self.targets
+    X, y, labels = self.features, self.targets, self.sample_labels
 
     if len(ratios) == 2:
       # End of recursion
@@ -271,14 +285,14 @@ class Omix(Nomear):
         om2: Omix = Omix.sum(om2_list, data_name=data_labels[1])
       else:
         # Split data using train_test_split
-        X_train, X_test, y_train, y_test = train_test_split(
-          X, y, test_size=test_size, random_state=random_state,
+        X_train, X_test, y_train, y_test, l_train, l_test = train_test_split(
+          X, y, labels, test_size=test_size, random_state=random_state,
           shuffle=shuffle, stratify=stratify)
 
-        om1 = self.duplicate(
-          features=X_train, targets=y_train, data_name=data_labels[0])
-        om2 = self.duplicate(
-          features=X_test, targets=y_test, data_name=data_labels[1])
+        om1 = self.duplicate(features=X_train, targets=y_train,
+                             sample_labels=l_train, data_name=data_labels[0])
+        om2 = self.duplicate(features=X_test, targets=y_test,
+                             sample_labels=l_test, data_name=data_labels[1])
 
       return [om1, om2]
     else:
@@ -308,6 +322,7 @@ class Omix(Nomear):
     return self.duplicate(
       features=np.concatenate((self.features, other.features)),
       targets=np.concatenate((self.targets, other.targets)),
+      sample_labels=np.concatenate((self.sample_labels, other.sample_labels)),
       data_name=data_name)
 
   def __mul__(self, other):
@@ -315,6 +330,7 @@ class Omix(Nomear):
 
     features = np.concatenate((self.features, other.features), axis=1)
     assert all(self.targets == other.targets), '!! targets must be the same'
+    assert all(self.sample_labels == other.sample_labels), '!! sample_labels must be the same'
 
     if self._feature_labels is None and other._feature_labels is None:
       feature_labels = None
@@ -323,8 +339,8 @@ class Omix(Nomear):
     assert self.target_labels == other.target_labels, '!! target_labels must be the same'
 
     data_name = f'{self.data_name} x {other.data_name}'
-    return Omix(features, self.targets, feature_labels, self.target_labels,
-                data_name)
+    return self.duplicate(features=features, feature_labels=feature_labels,
+                          data_name=data_name)
 
   def __str__(self):
     return f'{self.data_name}({self.n_samples}x{self.n_features})'

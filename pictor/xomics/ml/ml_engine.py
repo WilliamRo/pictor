@@ -208,8 +208,7 @@ class MLEngine(Nomear):
                    plot_roc=kwargs.get('plot_roc', False),
                    show_signature=kwargs.get('show_signature', False),
                    omix=om_whole,
-                   mi_remap=lambda i: np.argwhere(
-                     (om_whole.features[i] == omix.features).all(1))[0][0])
+                   mi_remap=lambda i: om_whole.sample_labels[i])
 
     # (-1) Return the fitted models and probabilities
     return package

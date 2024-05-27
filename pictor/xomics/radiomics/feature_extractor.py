@@ -21,17 +21,19 @@ from collections import OrderedDict
 from roma import Nomear, console
 
 import numpy as np
+import os
 import SimpleITK as sitk
 
 
 
 class RadiomicFeatureExtractor(Nomear):
 
-  def __init__(self, **settings):
+  def __init__(self, settings={}, filters=()):
     from radiomics import featureextractor
 
     self.pyrad_module = featureextractor
     self.settings = settings
+    self.filters = filters
 
     self.prompt = '[RadFeatureExtractor] >>'
 
@@ -81,23 +83,37 @@ class RadiomicFeatureExtractor(Nomear):
 
   def get_ibsi_extractor(self):
     settings = {
-      # 'force2D': True,
       'binWidth': 25,
       # 'binWidth': 1,
       # 'additionalInfo': False,
-      # 'normalize': True,
-      # 'resampledPixelSpacing': [2, 2, 2],
-      # 'Interpolator': sitk.sitkBSpline,
+      'normalize': True,
+      'resampledPixelSpacing': [2, 2, 2],
+      'Interpolator': sitk.sitkBSpline,
     }
+    settings.update(self.settings)
     extractor = self.pyrad_module.RadiomicsFeatureExtractor(**settings)
 
-    # extractor.addProvenance(True)
+    for ft in self.filters: extractor.enableImageTypeByName(ft)
 
     # extractor.enableImageTypeByName('LoG')
     # extractor.enableImageTypeByName('Wavelet')
 
     extractor.enableAllFeatures()
     return extractor
+
+  def convert_dcm_to_nii(self, dcm_dir, save_dir=None,
+                         file_name=None, verbose=False) -> sitk.Image:
+    reader = sitk.ImageSeriesReader()
+    dcm_names = reader.GetGDCMSeriesFileNames(dcm_dir)
+    reader.SetFileNames(dcm_names)
+    image = reader.Execute()
+
+    if save_dir is not None:
+      if file_name is None: file_name = os.path.basename(dcm_dir) + '.nii.gz'
+      sitk.WriteImage(image, os.path.join(save_dir, file_name))
+      if verbose: console.show_status(f'{file_name} saved to {save_dir}.')
+
+    return image
 
   # endregion: Public Method
 

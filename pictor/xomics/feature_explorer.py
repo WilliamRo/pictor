@@ -358,6 +358,7 @@ class FeatureExplorer(Plotter):
 
     - sf_lasso: select features using Lasso regression
     - sf_pca: select features using PCA
+    - sf_mrmr: select features using mRMR
     """
     self.select_features('indices', indices=indices)
 
