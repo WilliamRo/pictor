@@ -109,7 +109,7 @@ class Omix(Nomear):
     if method in ('pca', ):
       from sklearn.decomposition import PCA
 
-      n_components = kwargs.get('n_components', 3)
+      n_components = kwargs.get('n_components', 10)
 
       model = PCA(n_components=n_components)
       feature_labels = [f'PC-{i + 1}' for i in range(n_components)]
@@ -119,6 +119,14 @@ class Omix(Nomear):
       from pictor.xomics.ml.lasso import Lasso
       model = Lasso(kwargs.get('verbose', 0))
       omix_reduced = model.select_features(omix, **kwargs)
+    elif method in ('mrmr',):
+      from mrmr import mrmr_classif
+      import pandas as pd
+      k = kwargs.get('k', 10)
+      selected_features = mrmr_classif(
+        X=pd.DataFrame(omix.features), y=pd.Series(omix.targets), K=k)
+      omix_reduced = self.get_sub_space(selected_features)
+      model = selected_features
     elif method in ('indices', ):
       indices = kwargs.get('indices', None)
       omix_reduced = self.get_sub_space(indices)

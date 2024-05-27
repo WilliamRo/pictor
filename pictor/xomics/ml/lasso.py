@@ -21,7 +21,7 @@ import numpy as np
 
 class Lasso(MLEngine):
   SK_CLASS = SKLasso
-  DEFAULT_HP_SPACE = {'alpha': np.logspace(-6, 1, 20)}
+  DEFAULT_HP_SPACE = {'alpha': np.logspace(-6, 1, 50)}
   DEFAULT_HP_MODEL_INIT_KWARGS = {'tol': 1e-2}
 
   @property
@@ -90,27 +90,49 @@ class Lasso(MLEngine):
     if not kwargs.get('plot_path'): return
 
     # (3) Plot path
+    # vl_color = '#5b79ca'
+    vl_color = '#bd3831'
+
     alphas, coefs, dual_gaps = lasso_path(X, y, alphas=alphas)
+    log_alphas = np.log(alphas)
 
     # Set plot style
     # plt.style.use('ggplot')
+    fig = plt.figure(figsize=(12, 5))
 
-    # plt.figure(figsize=(8, 6))
-    log_alphas = np.log(alphas)
-    for coef in coefs: plt.plot(log_alphas, coef, lw=2)
+    # (3.1) Plot the best alpha found by LassoCV
+    ax1 = fig.add_subplot(1, 2, 1)
+    for coef in coefs: ax1.plot(log_alphas, coef, lw=2)
 
-    # Plot the best alpha found by LassoCV
-    plt.axvline(np.log(best_alpha), linestyle='--', color='r',
-                label=f'Best alpha: {best_alpha:.4f}')
+    ax1.axvline(np.log(best_alpha), linestyle='--', color=vl_color,
+                label=rf'Best $\alpha$: {best_alpha:.4f}')
     # ax2 = plt.gca().twinx()
     # ax2.plot(log_alphas, dual_gaps, ':', color='k', label='Dual Gaps')
 
-    plt.xlabel(r'Log($\alpha$)')
-    plt.ylabel('Features')
-    plt.title('LASSO Paths')
-    plt.grid(True)
+    ax1.set_xlabel(r'Log($\alpha$)')
+    ax1.set_ylabel('Features')
+    ax1.set_title('LASSO Paths')
+    ax1.grid(True)
+    # plt.grid(True)
+    ax1.legend()
 
-    plt.legend()
+    # (3.2)
+    mse_mus = np.apply_along_axis(np.mean, 1, lasso_cv.mse_path_)
+    mse_stds = np.apply_along_axis(np.std, 1, lasso_cv.mse_path_)
+
+    ax2 = fig.add_subplot(1, 2, 2)
+    ax2.errorbar(log_alphas, mse_mus, yerr=mse_stds, fmt='o',
+                 mfc='r', mec='r', ecolor='#AAA', ms=3,)
+
+    ax2.axvline(np.log(best_alpha), linestyle='--', color=vl_color)
+
+    ax2.set_xlabel(r'Log($\alpha$)')
+    ax2.set_ylabel('Mean Squared Error (MSE)')
+    # ax2.grid(True)
+    # ax2.set_title('LASSO Paths')
+
+    # ax2.legend()
+
     plt.tight_layout()
     plt.show()
 

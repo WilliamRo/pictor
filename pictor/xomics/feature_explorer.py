@@ -199,7 +199,7 @@ class FeatureExplorer(Plotter):
 
   # region: Feature Selection
 
-  def sf_pca(self, n_components: int=3, standardize: int=1):
+  def sf_pca(self, n_components: int=10, standardize: int=1):
     """Feature selection using PCA"""
     self.select_features('PCA', n_components=n_components,
                          standardize=standardize)
@@ -209,13 +209,23 @@ class FeatureExplorer(Plotter):
                threshold: float=0.001, min_alpha_exp: int=-7,
                max_alpha_exp: int=1, n_alphas: int=100, standardize: int=1,
                n_jobs:int =10, save_model: int=0):
-    """Feature selection using Lasso regression"""
+    """Feature selection using Lasso regression.
+
+    - Super Signature Test: Pass
+    """
     hp_space = {'alpha': np.logspace(min_alpha_exp, max_alpha_exp, n_alphas)}
     self.select_features(
       'Lasso', n_splits=n_splits, strategy=strategy, hp_space=hp_space,
       random_state=random_state, threshold=threshold, verbose=verbose,
       standardize=standardize, n_jobs=n_jobs, plot_path=plot_path,
       save_model=save_model)
+
+  def sf_mrmr(self, k=10, standardize=1):
+    """Feature selection using mRMR.
+
+    - Super Signature Test: Fail
+    """
+    self.select_features('mRMR', k=k, standardize=standardize)
 
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
