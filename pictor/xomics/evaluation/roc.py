@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-=======================================================================-==
+import matplotlib.pyplot as plt
+
 from roma import Nomear
 
 
@@ -34,19 +36,27 @@ class ROC(Nomear):
     fpr, tpr, _ = self.roc_curve
     return auc(fpr, tpr)
 
-  def plot_roc(self):
+  def plot_roc(self, ax: plt.Axes=None, **kwargs):
     import matplotlib.pyplot as plt
 
     fpr, tpr, _ = self.roc_curve
     auc = self.auc
 
-    plt.plot([0, 1], [0, 1], c='grey', alpha=0.5, linestyle='--')
-    plt.plot(fpr, tpr)
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title(f'AUC = {auc:.3f}')
+    plt_show = ax is None
 
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+    if ax is None:
+      fig = plt.figure(**kwargs)
+      ax: plt.Axes = fig.add_subplot(111)
+
+    ax.plot([0, 1], [0, 1], c='grey', alpha=0.5, linestyle='--')
+    ax.plot(fpr, tpr)
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    ax.set_title(f'AUC = {auc:.3f}')
+
+    ax.grid(True)
+
+    if plt_show:
+      plt.tight_layout()
+      plt.show()
 

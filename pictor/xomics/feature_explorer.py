@@ -40,6 +40,7 @@ class FeatureExplorer(Plotter):
 
     self.new_settable_attr('statanno', True, bool, 'Statistical annotation')
     self.new_settable_attr('showfliers', False, bool, 'Option to show fliers')
+    self.new_settable_attr('roc', False, bool, 'Option to show ROC curve')
 
   # region: Properties
 
@@ -170,8 +171,17 @@ class FeatureExplorer(Plotter):
 
   def plot(self, x, ax: plt.Axes, max_title_len=999, **kwargs):
     features = self.features[:, x]
+
     groups = [features[self.targets == i]
               for i, _ in enumerate(self.target_labels)]
+
+    # Plot ROC if required
+    if self.get('roc') and len(groups) == 2:
+      from pictor.xomics.evaluation.roc import ROC
+      if np.mean(groups[0]) > np.mean(groups[1]): features = -features
+      roc = ROC(features, self.targets)
+      roc.plot_roc(ax)
+      return
 
     box = ax.boxplot(groups, showfliers=self.get('showfliers'),
                      positions=range(len(groups)))
@@ -302,7 +312,9 @@ class FeatureExplorer(Plotter):
     console.show_status(f'No feature found with key `{key}`.')
 
   def filter_by_name(self, key: str):
-    omix = self.omix.filter_by_name([key])
+    """Filter features by their name"""
+    keys = key.split(',')
+    omix = self.omix.filter_by_name(keys)
     omix.show_in_explorer()
   fbn = filter_by_name
 
@@ -311,6 +323,8 @@ class FeatureExplorer(Plotter):
       'a', lambda: self.flip('statanno'), 'Toggle statanno')
     self.register_a_shortcut(
       'f', lambda: self.flip('showfliers'), 'Toggle showfliers')
+    self.register_a_shortcut(
+      'r', lambda: self.flip('roc'), 'Toggle ROC')
 
   def ls(self):
     """Below are misc methods you can use in FeatureExplorer
