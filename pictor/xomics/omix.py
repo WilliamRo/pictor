@@ -202,7 +202,8 @@ class Omix(Nomear):
       sample_labels = np.array(
         [f'{i + 1}' for i in range(self.n_samples)])
     assert len(sample_labels) == self.n_samples
-    self.put_into_pocket('sample_labels', sample_labels, exclusive=False)
+    self.put_into_pocket('sample_labels', sample_labels, local=True,
+                         exclusive=False)
 
   def report(self, **kwargs):
     console.show_info(f'Details of `{self.data_name}`:')

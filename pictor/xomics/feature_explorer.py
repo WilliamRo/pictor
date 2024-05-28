@@ -175,7 +175,7 @@ class FeatureExplorer(Plotter):
     groups = [features[self.targets == i]
               for i, _ in enumerate(self.target_labels)]
 
-    # Plot ROC if required
+    # (Option-1) Plot ROC if required
     if self.get('roc') and len(groups) == 2:
       from pictor.xomics.evaluation.roc import ROC
       if np.mean(groups[0]) > np.mean(groups[1]): features = -features
@@ -183,13 +183,21 @@ class FeatureExplorer(Plotter):
       roc.plot_roc(ax)
       return
 
-    box = ax.boxplot(groups, showfliers=self.get('showfliers'),
-                     positions=range(len(groups)))
-    ax.set_xticklabels(self.target_labels)
+    # (Option-2) Plot boxplot
+    if len(features) == 1:
+      target = self.targets[0]
+      ax.plot(target, features[0], 'o')
+      ax.set_xticks([0, 1], self.target_labels)
+      ax.set_xlim(-0.5, 1.5)
+    else:
+      ax.boxplot(groups, showfliers=self.get('showfliers'),
+                 positions=range(len(groups)))
+      ax.set_xticklabels(self.target_labels)
+
     ax.set_title(self.feature_labels[x][:max_title_len])
 
     # Show statistical annotation if required
-    if self.get('statanno'):
+    if self.get('statanno') and all([len(g) > 1 for g in groups]):
       ann = Annotator(groups, ax)
       ann.annotate(**kwargs)
 
