@@ -32,3 +32,12 @@ def get_model_class(key):
   }[key]
 
   return ModelClass
+
+
+abbreviation_dict = {
+  'LogisticRegression': 'LR',
+  'DecisionTree': 'DT',
+  'SupportVectorMachine': 'SVM',
+  'RandomForestClassifier': 'RF',
+  'XGBClassifier': 'XGB',
+}

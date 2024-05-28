@@ -291,14 +291,8 @@ class FitPackage(Nomear):
   def __getitem__(self, item):
     if isinstance(item, str):
       item_l = item.lower()
-      if item_l in ('macro_f1', 'f1'): return self.confusion_matrix.macro_F1
-      elif item_l in ('acc', 'accuracy'): return self.confusion_matrix.accuracy
-      elif item_l in ('macro_precision', 'precision'):
-        return self.confusion_matrix.macro_precision
-      elif item_l in ('macro_recall', 'recall'):
-        return self.confusion_matrix.macro_recall
-      elif item_l in ('auc', 'roc_auc'): return self.ROC.auc
-      else: raise ValueError(f'!! Unknown key {item}')
+      if item_l in ('auc', 'roc_auc'): return self.ROC.auc
+      else: return self.confusion_matrix[item]
     else: raise ValueError('!! item should be a string.')
 
   # endregion: Overriding

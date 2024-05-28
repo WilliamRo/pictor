@@ -220,6 +220,50 @@ class ConfusionMatrix(object):
     plt.show()
 
 
+  def __getitem__(self, key: str):
+    """This method is only for binary classification"""
+    assert len(self.TPs) == 2, 'This method is only for binary classification'
+
+    TP, FN = self.TPs[1], self.FNs[1]
+    FP, TN = self.FPs[1], self.TNs[1]
+    P, N = TP + FN, FP + TN
+    PP, PN = TP + FP, FN + TN
+
+    key = key.lower()
+    if key in ('tpr', 'recall', 'true positive rate', 'sensitivity'):
+      return TP / np.maximum(P, 1)
+    if key in ('fnr', 'miss rate', 'false negative rate'):
+      return FN / np.maximum(P, 1)
+    if key in ('tnr', 'specificity', 'true negative rate', 'spc', 'selectivity'):
+      return TN / np.maximum(N, 1)
+    if key in ('fpr', 'fall-out', 'false positive rate'):
+      return FP / np.maximum(N, 1)
+
+    if key in ('ppv', 'precision', 'positive predictive value'):
+      return TP / np.maximum(PP, 1)
+    if key in ('fdr', 'false discovery rate'):
+      return FP / np.maximum(PP, 1)
+    if key in ('for', 'false omission rate'):
+      return FN / np.maximum(PN, 1)
+    if key in ('npv', 'negative predictive value'):
+      return TN / np.maximum(PN, 1)
+
+    if key in ('f1', 'f1-score'):
+      return 2 * TP / np.maximum(2 * TP + FP + FN, 1)
+    if key in ('acc', 'accuracy'):
+      return (TP + TN) / np.maximum(P + N, 1)
+    if key in ('balanced accuracy', 'ba'):
+      return (TP / np.maximum(P, 1) + TN / np.maximum(N, 1)) / 2
+
+    if key in ('mcc', 'matthews correlation coefficient'):
+      return (TP * TN - FP * FN) / np.maximum(
+        np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)), 1)
+    if key in ('bm', 'bookmaker informedness'):
+      return self['tpr'] + self['tnr'] - 1
+
+    raise ValueError(f'!! Unknown key `{key}` !!')
+
+
 
 if __name__ == '__main__':
   cm = ConfusionMatrix(3, class_names=('Goose', 'Cat', 'Dog'))

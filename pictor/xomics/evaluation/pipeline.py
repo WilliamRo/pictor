@@ -140,6 +140,13 @@ class Pipeline(Nomear):
     # For each sub-space
     for key, omix_list in self.sub_space_dict.items():
       sf_key = key[0]
+
+      # Add feature number to specific methods
+      if sf_key in ('pca', ):
+        arg, val = key[1][0]
+        if arg in ('n_components', ):
+          sf_key += f'-{val}'
+
       # Register sf_key if not exists
       if sf_key not in row_labels: row_labels.append(sf_key)
 
@@ -165,7 +172,7 @@ class Pipeline(Nomear):
     for sf_key in row_labels:
       console.show_info(f'Feature selection method: {sf_key}')
       for ml_key in col_labels:
-        console.supplement(f'Model: {ml_key}', level=2)
+        console.supplement(f'Model: {ml_key}', level=3)
         pkg_list = matrix_dict[(sf_key, ml_key)]
         n_pkg = len(pkg_list)
 
@@ -175,8 +182,33 @@ class Pipeline(Nomear):
           CI1, CI2 = st.t.interval(0.95, n_pkg-1, loc=mu, scale=st.sem(values))
           info = f'Avg({key}) over {n_pkg} trials: {mu:.3f}'
           info += f', CI95% = [{CI1:.3f}, {CI2:.3f}]'
-          console.supplement(info, level=3)
+          console.supplement(info, level=4)
 
     print('-' * 79)
+
+  def plot_matrix(self, fig_size=(5, 5)):
+    metrics = ['AUC', 'Sensitivity', 'Selectivity',
+               'Balanced Accuracy', 'Accuracy', 'F1']
+
+    row_labels, col_labels, matrix_dict = self.get_pkg_matrix()
+
+    # Generate matrices
+    matrices = OrderedDict()
+    for key in metrics:
+      matrices[key] = np.zeros((len(row_labels), len(col_labels)))
+      for r, sf_key in enumerate(row_labels):
+        for c, ml_key in enumerate(col_labels):
+          pkg_list = matrix_dict[(sf_key, ml_key)]
+          values = [p[key] for p in pkg_list]
+          matrices[key][r, c] = np.mean(values)
+
+    # Plot matrices
+    from pictor.plotters.matrix_viewer import MatrixViewer
+    from pictor.xomics.ml import abbreviation_dict
+
+    row_labels = [rl.upper() for rl in row_labels]
+    col_labels = [abbreviation_dict[cl] for cl in col_labels]
+
+    MatrixViewer.show_matrices(matrices, row_labels, col_labels, fig_size)
 
   # endregion: Public Methods
