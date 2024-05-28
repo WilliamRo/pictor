@@ -29,6 +29,28 @@ import SimpleITK as sitk
 class RadiomicFeatureExtractor(Nomear):
 
   def __init__(self, settings={}, filters=()):
+    """
+    `settings` Example
+    ------------------
+    settings = {
+      'binWidth': 25,
+      'normalize': True,
+      'resampledPixelSpacing': [2, 2, 2],
+      'Interpolator': sitk.sitkBSpline,
+      'sigma': [3, 5]                                  # for 'LoG' filter
+    }
+
+    `filters` options
+    -----------------
+    - 'LoG',
+    - 'Wavelet'
+    - 'Square'
+    - 'SquareRoot'
+    - 'Logarithm'
+    - 'Exponential'
+    - 'LocalBinaryPattern2D'
+    - 'LocalBinaryPattern3D'
+    """
     from radiomics import featureextractor
 
     self.pyrad_module = featureextractor
