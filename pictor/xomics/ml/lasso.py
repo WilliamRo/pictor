@@ -122,7 +122,7 @@ class Lasso(MLEngine):
 
     ax2 = fig.add_subplot(1, 2, 2)
     ax2.errorbar(log_alphas, mse_mus, yerr=mse_stds, fmt='o',
-                 mfc='r', mec='r', ecolor='#AAA', ms=3,)
+                 mfc='r', mec='r', ecolor='#AAA', capsize=3, ms=3,)
 
     ax2.axvline(np.log(best_alpha), linestyle='--', color=vl_color)
 
