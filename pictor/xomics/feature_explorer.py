@@ -63,7 +63,8 @@ class FeatureExplorer(Plotter):
 
   # region: Plot Methods
 
-  def multi_plots(self, indices: str = '1-10', rows: int = 2):
+  def multi_plots(self, indices: str = '1-10', rows: int = 2,
+                  hsize: int = 10, vsize: int = 6):
     """Plot multiple features at once
 
     Args:
@@ -79,7 +80,7 @@ class FeatureExplorer(Plotter):
 
     N = len(indices)
     cols = (N + 1) // rows if rows > 1 else N
-    fig, axes = plt.subplots(rows, cols, figsize=(10, 6))
+    fig, axes = plt.subplots(rows, cols, figsize=(hsize, vsize))
     for i, ax in zip(indices, axes.flatten()):
       self.plot(self.pictor.objects[i - 1], ax,
                 max_title_len=15, n_top=rows + 1)
@@ -245,6 +246,13 @@ class FeatureExplorer(Plotter):
     title = f'{self.pictor.static_title} - {method}'
     omix.show_in_explorer(title=title)
 
+  def switch_target(self, target_key: str, new_omix: int = 1):
+    """Switch to a new target"""
+    omix = self.omix.set_targets(target_key, return_new_omix=new_omix)
+    if new_omix: omix.show_in_explorer()
+    else: self.refresh()
+  st = switch_target
+
   # endregion: Feature Selection
 
   # region: Machine Learning
@@ -355,6 +363,7 @@ class FeatureExplorer(Plotter):
     - report: report omix details
     - sdd: standardize features
     - sort: sort features by p-values
+    - st: switch_target, switch to a new target
 
     - sf: list feature selection methods
     - ml: list machine learning methods

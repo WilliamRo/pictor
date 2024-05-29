@@ -54,6 +54,14 @@ class Pipeline(Nomear):
     for _, omices in self.sub_space_dict.items(): spaces.extend(omices)
     return spaces
 
+  @property
+  def lasso_dim_median(self):
+    dims = []
+    for key, omices in self.sub_space_dict.items():
+      if 'lasso' not in key[0].lower(): continue
+      dims.extend([omix.n_features for omix in omices])
+    return int(np.median(dims))
+
   # endregion: Properties
 
   # region: Feature Selection
@@ -63,7 +71,7 @@ class Pipeline(Nomear):
     method = method.lower()
     prompt = '[FEATURE SELECTION] >>'
 
-    if method == 'pca': assert repeats == 1, "Repeat PCA makes no sense."
+    # if method == 'pca': assert repeats == 1, "Repeat PCA makes no sense."
 
     # Initialize bag if not exists
     key = (method, tuple(sorted(tuple(kwargs.items()), key=lambda x: x[0])))
@@ -142,9 +150,9 @@ class Pipeline(Nomear):
       sf_key = key[0]
 
       # Add feature number to specific methods
-      if sf_key in ('pca', ):
+      if sf_key in ('pca', 'mrmr'):
         arg, val = key[1][0]
-        if arg in ('n_components', ):
+        if arg in ('n_components', 'k'):
           sf_key += f'-{val}'
 
       # Register sf_key if not exists

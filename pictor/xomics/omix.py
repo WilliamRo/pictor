@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-==================================================================-=======
+from collections import OrderedDict
 from pictor.xomics.stat_analyzers import single_factor_analysis
 from roma import console
 from roma import io
@@ -64,6 +65,9 @@ class Omix(Nomear):
       return [f'class-{i + 1}' for i in range(len(np.unique(self.targets)))]
     return self._target_labels
 
+  @Nomear.property(local=True)
+  def target_collection(self): return OrderedDict()
+
   @Nomear.property()
   def groups(self):
     """Lists of indices of samples in each class"""
@@ -71,7 +75,7 @@ class Omix(Nomear):
 
   @Nomear.property()
   def omix_groups(self):
-    """Returns omix objects for each group"""
+    """Returns omix 01-objects for each group"""
     return [self.duplicate(features=self.features[group],
                            targets=self.targets[group],
                            sample_labels=self.sample_labels[group])
@@ -125,12 +129,19 @@ class Omix(Nomear):
       from pictor.xomics.ml.lasso import Lasso
       model = Lasso(kwargs.get('verbose', 0))
       omix_reduced = model.select_features(omix, **kwargs)
-    elif method in ('mrmr',):
+    elif method in ('mrmr', ):
       from mrmr import mrmr_classif
       import pandas as pd
       k = kwargs.get('k', 10)
       selected_features = mrmr_classif(
         X=pd.DataFrame(omix.features), y=pd.Series(omix.targets), K=k)
+      omix_reduced = self.get_sub_space(selected_features)
+      model = selected_features
+    elif method in ('pval', 'sig'):
+      indices = np.argsort(
+        [r[0][2] for r in self.single_factor_analysis_reports])
+      k = kwargs.get('k', 10)
+      selected_features = indices[:k]
       omix_reduced = self.get_sub_space(selected_features)
       model = selected_features
     elif method in ('indices', ):
@@ -197,6 +208,25 @@ class Omix(Nomear):
 
   # region: Public Methods
 
+  def add_to_target_collection(self, key, targets, target_labels=None):
+    # Sanity check
+    targets = np.array(targets)
+    assert len(targets) == self.n_samples, '!! targets must have the same length as samples'
+
+    self.target_collection[key] = (targets, target_labels)
+
+  def set_targets(self, key, return_new_omix=True):
+    targets, target_labels = self.target_collection[key]
+
+    if return_new_omix:
+      return self.duplicate(targets=targets, target_labels=target_labels)
+
+    self.targets = targets
+    self._target_labels = target_labels
+    self.get_from_pocket('target_labels', put_back=False)
+    self.get_from_pocket('groups', put_back=False)
+    self.get_from_pocket('omix_groups', put_back=False)
+
   def set_sample_labels(self, sample_labels):
     if sample_labels is None:
       sample_labels = np.array(
@@ -212,6 +242,11 @@ class Omix(Nomear):
     console.supplement(f'Groups:')
     for i, group in enumerate(self.groups): console.supplement(
       f'{self.target_labels[i]}: {len(group)} samples', level=2)
+
+    if len(self.target_collection) > 0:
+      console.supplement(f'Target keys:')
+      for key in self.target_collection.keys():
+        console.supplement(f'{key}', level=2)
 
     if kwargs.get('report_stat', True):
       mu_min, mu_max = min(self.feature_mean[0]), max(self.feature_mean[0])
@@ -232,13 +267,14 @@ class Omix(Nomear):
     return result
 
   def duplicate(self, **kwargs) -> 'Omix':
-    return Omix(
+    omix = Omix(
       features=kwargs.get('features', self.features.copy()),
       targets=kwargs.get('targets', self.targets.copy()),
       feature_labels=kwargs.get('feature_labels', self._feature_labels),
       sample_labels=kwargs.get('sample_labels', self.sample_labels),
       target_labels=kwargs.get('target_labels', self._target_labels),
       data_name=kwargs.get('data_name', self.data_name))
+    return omix
 
   def get_k_folds(self, k: int, shuffle=True, random_state=None,
                   balance_classes=True, return_whole=False):

@@ -92,3 +92,26 @@ class MatrixViewer(Plotter):
 
     p.show()
 
+
+  def multi_plot(self, indices: str='*', rows: int = 2,
+                 hsize: int = 12, vsize: int = 6):
+    import matplotlib.pyplot as plt
+
+    if indices == '*': indices = f'1-{len(self.matrices)}'
+
+    if '-' in indices:
+      start, end = map(int, indices.split('-'))
+      indices = list(range(start, end + 1))
+    else: indices = list(map(int, indices.split(',')))
+
+    N = len(indices)
+    cols = (N + 1) // rows if rows > 1 else N
+    fig, axes = plt.subplots(rows, cols, figsize=(hsize, vsize))
+    for i, ax in zip(indices, axes.flatten()):
+      x = self.pictor.objects[i - 1]
+      self.matshow(ax, x, fig)
+
+    plt.tight_layout()
+    plt.show()
+  mp = multi_plot
+
