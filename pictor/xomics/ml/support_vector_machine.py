@@ -35,6 +35,6 @@ class SupportVectorMachine(MLEngine):
     },
   ]
 
-  EXTRA_FIT_KWARGS = {'probability': True}
+  EXTRA_FIT_KWARGS = {'probability': True, 'max_iter': int(1e6)}
 
-  DEFAULT_HP_MODEL_INIT_KWARGS = {'max_iter': 10000}
+  DEFAULT_HP_MODEL_INIT_KWARGS = {'max_iter': int(1e6)}

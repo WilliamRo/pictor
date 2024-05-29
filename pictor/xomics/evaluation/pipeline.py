@@ -83,7 +83,9 @@ class Pipeline(Nomear):
     for i in range(repeats):
       if show_progress: console.print_progress(i, repeats)
       if method == '*': omix_sub = self.omix
-      else: omix_sub = self.omix.select_features(method, **kwargs)
+      else:
+        if method == 'pca' and i > 0: omix_sub = omix_sub.duplicate()
+        else: omix_sub = self.omix.select_features(method, **kwargs)
 
       self.sub_space_dict[key].append(omix_sub)
 
