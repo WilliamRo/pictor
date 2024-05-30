@@ -397,7 +397,9 @@ class FeatureExplorer(Plotter):
 
     # 1. Wrap data
     if omix is None:
-      omix = Omix(features, targets, feature_labels, target_labels)
+      omix = Omix(features, targets, sample_labels=None,
+                  feature_labels=feature_labels,
+                  target_labels=target_labels)
 
     # 2. Initiate Pictor and show
     p = Pictor(title=title, figure_size=fig_size)
