@@ -197,7 +197,7 @@ class Omix(Nomear):
   # region: IO
 
   @staticmethod
-  def load(file_path: str, verbose=True):
+  def load(file_path: str, verbose=True) -> 'Omix':
     return io.load_file(file_path, verbose=verbose)
 
   def save(self, file_path: str, verbose=True):
@@ -341,6 +341,39 @@ class Omix(Nomear):
       return om1.split(*ratios[:-1], data_labels=data_labels[:-1],
                        balance_classes=balance_classes, shuffle=shuffle,
                        random_state=random_state) + [om2]
+
+  def intersect_merge(self, other: 'Omix', data_name=None) -> 'Omix':
+    console.show_status(
+      f'Merging `{self.data_name}` and `{other.data_name}` ...')
+    console.section('Information of two Omices')
+    self.report()
+    print()
+    other.report()
+
+    s_indices, o_indices = [], []
+    for i, label in enumerate(self.sample_labels):
+      js = np.where(other.sample_labels == label)[0]
+      # assert len(js) < 2
+      if len(js) == 0: continue
+      j = js[0]
+      assert self.targets[i] == other.targets[j]
+      s_indices.append(i), o_indices.append(j)
+
+    s_features, o_features = self.features[s_indices], other.features[o_indices]
+    features = np.concatenate((s_features, o_features), axis=1)
+    feature_labels = self.feature_labels + other.feature_labels
+    sample_labels = self.sample_labels[s_indices]
+    if data_name is None: data_name = f'{self.data_name}x{other.data_name}'
+
+    s_targets, o_targets = self.targets[s_indices], other.targets[o_indices]
+
+    omix = self.duplicate(features=features, feature_labels=feature_labels,
+                          targets=self.targets[s_indices],
+                          sample_labels=sample_labels, data_name=data_name)
+
+    console.section('Information after merging')
+    omix.report()
+    return omix
 
   # endregion: Public Methods
 
