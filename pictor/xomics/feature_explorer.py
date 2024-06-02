@@ -173,6 +173,12 @@ class FeatureExplorer(Plotter):
   def plot(self, x, ax: plt.Axes, max_title_len=999, **kwargs):
     features = self.features[:, x]
 
+    # (Option-0) Plot line fit if required
+    if self.omix.targets_are_numerical:
+      self.plot_line_fit(ax, x=features, y=self.omix.targets,
+                         x_label=self.feature_labels[x])
+      return
+
     groups = [features[self.targets == i]
               for i, _ in enumerate(self.target_labels)]
 
@@ -201,6 +207,97 @@ class FeatureExplorer(Plotter):
     if self.get('statanno') and all([len(g) > 1 for g in groups]):
       ann = Annotator(groups, ax)
       ann.annotate(**kwargs)
+
+  def plot_line_fit(self, ax: plt.Axes, x, y, x_label):
+    """Plot line fit.
+
+    Reference:
+    - https://stackoverflow.com/questions/19991445/run-an-ols-regression-with-pandas-data-frame
+    - Statistics in Geography by David Ebdon (ISBN: 978-0631136880)
+    - Reliability Engineering Resource Website:
+    - http://www.weibull.com/DOEWeb/confidence_intervals_in_simple_linear_regression.htm
+    - University of Glascow, Department of Statistics:
+    - http://www.stats.gla.ac.uk/steps/glossary/confidence_intervals.html#conflim
+    """
+    # fit a curve to the data using a least squares 1st order polynomial fit
+    z = np.polyfit(x, y, 1)
+    model = np.poly1d(z)
+
+    # get the coordinates for the fit curve
+    n = len(x)  # number of samples in original fit
+    x_min, x_max = np.min(x), np.max(x)
+
+    # predict y values of original data using the fit
+    p_y = z[0] * x + z[1]
+
+    # calculate the y-error (residuals)
+    y_err = y - p_y
+
+    # create series of new test x-values to predict for
+    m = (x_max - x_min) * 0.1
+    p_x = np.linspace(x_min - m, x_max + m, num=n)
+
+    # now calculate confidence intervals for new test x-series
+    mean_x = np.mean(x)  # mean of x
+
+    from scipy import stats
+    t = stats.t.ppf(1 - 0.025, n - 1)
+
+    # t = 2.31  # appropriate t value (where n=9, two tailed 95%)
+
+    s_err = np.sum(np.power(y_err, 2))  # sum of the squares of the residuals
+
+    confs = t * np.sqrt(
+      (s_err / (n - 2)) * (1.0 / n + (
+          np.power((p_x - mean_x), 2) / ((np.sum(np.power(x, 2))) - n * (
+        np.power(mean_x, 2))))))
+
+    # now predict y based on test x-values
+    p_y = z[0] * p_x + z[1]
+
+    # get lower and upper confidence limits based on predicted y and confidence intervals
+    lower = p_y - abs(confs)
+    upper = p_y + abs(confs)
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(self.target_labels[0])
+
+    olsr = self.omix.calc_OLS_result(x, print_summary=False)
+    pval = olsr.pvalues[1]
+    ax.set_title(f'P-value = {pval:.3g}')
+
+    # plot confidence limits
+    ax.fill_between(p_x, lower, upper, alpha=0.4,
+                    color="#CCC", label=r'Confidence band (95%)')
+
+    # plot sample data
+    ax.scatter(x, y, c='#5b79ca', s=10)
+
+    # plot line of best fit
+    ax.plot([p_x[0], p_x[-1]], [model(p_x[0]), model(p_x[-1])],
+            'r-', label='Regression line')
+
+    def limit(data, func, m=0.1, pct=None):
+      if pct is not None:
+        low, high = np.percentile(data, pct), np.percentile(data, 100 - pct)
+      else: low, high = np.min(data), np.max(data)
+      d = high - low
+      func([low - m * d, high + m * d])
+    if not self.get('showfliers'): limit(x, ax.set_xlim, pct=1)
+    ax.set_ylim(limit(y, ax.set_ylim))
+
+    # configure legend
+    ax.legend(loc=0)
+    leg = ax.get_legend()
+    ltext = leg.get_texts()
+    plt.setp(ltext, fontsize=10)
+
+  def ols(self):
+    """Perform OLS regression on the current feature and target
+    and report summary"""
+    x = self.features[:, self.pictor.objects[self.pictor.cursors[
+      self.pictor.Keys.OBJECTS]]]
+    self.omix.calc_OLS_result(x, print_summary=True)
 
   # endregion: Plot Methods
 
@@ -315,7 +412,9 @@ class FeatureExplorer(Plotter):
     assert sort_by == 'p_val'
     console.show_status('Sorting by p-values ...')
     with self.pictor.busy('Sorting ...'):
-      indices = np.argsort(
+      if self.omix.targets_are_numerical:
+        indices = np.argsort([r.pvalues[1] for r in self.omix.OLS_reports])
+      else: indices = np.argsort(
         [r[0][2] for r in self.omix.single_factor_analysis_reports])
     sorted_omix = self.omix.get_sub_space(indices, start_from_1=False)
     self.refresh()

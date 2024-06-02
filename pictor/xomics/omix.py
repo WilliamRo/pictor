@@ -65,6 +65,10 @@ class Omix(Nomear):
       return [f'class-{i + 1}' for i in range(len(np.unique(self.targets)))]
     return self._target_labels
 
+  @property
+  def targets_are_numerical(self):
+    return len(self.target_labels) == 1
+
   @Nomear.property(local=True)
   def target_collection(self): return OrderedDict()
 
@@ -92,6 +96,14 @@ class Omix(Nomear):
       groups = [features[self.targets == i]
                 for i, _ in enumerate(self.target_labels)]
       reports.append(single_factor_analysis(groups))
+    return reports
+
+  @Nomear.property()
+  def OLS_reports(self):
+    reports = []
+    for n in range(self.features.shape[1]):
+      features = self.features[:, n]
+      reports.append(self.calc_OLS_result(features))
     return reports
 
   @Nomear.property()
@@ -207,6 +219,14 @@ class Omix(Nomear):
   # endregion: IO
 
   # region: Public Methods
+
+  def calc_OLS_result(self, x, print_summary=False):
+    import statsmodels.api as sm
+    x = sm.add_constant(x)
+    model = sm.OLS(self.targets, x)
+    result = model.fit()
+    if print_summary: print(result.summary())
+    return result
 
   def add_to_target_collection(self, key, targets, target_labels=None):
     # Sanity check
