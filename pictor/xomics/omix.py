@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-==================================================================-=======
+import os
 from collections import OrderedDict
 from pictor.xomics.stat_analyzers import single_factor_analysis
 from roma import console
@@ -118,6 +119,31 @@ class Omix(Nomear):
   @property
   def sf_method(self): return self.get_from_pocket('sf_method')
 
+  @property
+  def data_frames(self):
+    import pandas as pd
+
+    dfs = []
+
+    # Sheet 1: Features
+    index = self.sample_labels
+    columns = self.feature_labels
+    df = pd.DataFrame(self.features, index=index, columns=columns)
+    dfs.append(df)
+
+    # Sheet 2: Default targets
+    col_label = ','.join(['Target'] + self.target_labels)
+    df = pd.DataFrame(self.targets, index=index, columns=[col_label])
+    dfs.append(df)
+
+    # Sheet 3- : Target collections
+    for key, (targets, target_labels) in self.target_collection.items():
+      col_label = ','.join([key] + target_labels)
+      df = pd.DataFrame(targets, index=index, columns=[col_label])
+      dfs.append(df)
+
+    return dfs
+
   # endregion: Properties
 
   # region: Feature Selection
@@ -210,6 +236,36 @@ class Omix(Nomear):
 
   @staticmethod
   def load(file_path: str, verbose=True) -> 'Omix':
+    if file_path.endswith('xlsx'):
+      import pandas as pd
+      data_frames = pd.read_excel(file_path, sheet_name=None)
+      data_name = os.path.basename(file_path).split('.')[0]
+
+      # Read features
+      df = data_frames.pop('Features')
+      feature_labels = df.columns.tolist()[1:]
+      sample_labels = df.index.tolist()
+      features = df.values[:, 1:]
+
+      # Read targets
+      df = data_frames.pop('Targets')
+      targets = df.values[:, 1:].flatten()
+      target_labels = df.columns.tolist()[1].split(',')[1:]
+
+      omix = Omix(features, targets, feature_labels=feature_labels,
+                  sample_labels=sample_labels, target_labels=target_labels,
+                  data_name=data_name)
+
+      # Read target collections
+      for key, df in data_frames.items():
+        targets = df.values[:, 1:].flatten()
+        mass = df.columns.tolist()[1].split(',')
+        target_key = mass[0]
+        target_labels = mass[1:]
+        omix.add_to_target_collection(target_key, targets, target_labels)
+
+      return omix
+
     return io.load_file(file_path, verbose=verbose)
 
   def save(self, file_path: str, verbose=True):

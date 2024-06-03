@@ -511,14 +511,30 @@ class FeatureExplorer(Plotter):
     if auto_show: p.show()
     return p, fe
 
-  def save(self):
+  def save(self, save_as_excel: int=0):
     """Save the current omix object"""
     import tkinter as tk
 
-    file_path = tk.filedialog.asksaveasfilename(
-      title='Save as', filetypes=[('OMIX files', '*.omix')])
+    if save_as_excel != 0:
+      import pandas as pd
 
-    if file_path is not None: self.omix.save(file_path, verbose=True)
+      file_path = tk.filedialog.asksaveasfilename(
+        title='Save as', filetypes=[('Excel files', '*.xlsx')])
+      if file_path is None: return
+      if not file_path.endswith('.xlsx'): file_path += '.xlsx'
+
+      with pd.ExcelWriter(file_path) as writer:
+        for i, df in enumerate(self.omix.data_frames):
+          if i == 0: sheet_name = 'Features'
+          elif i == 1: sheet_name = 'Targets'
+          else: sheet_name = f'Target-Collection-{i - 1}'
+          df.to_excel(writer, sheet_name=sheet_name)
+
+      console.show_status(f'{self.omix.data_name} exported to `{file_path}`.')
+    else:
+      file_path = tk.filedialog.asksaveasfilename(
+        title='Save as', filetypes=[('OMIX files', '*.omix')])
+      if file_path is not None: self.omix.save(file_path, verbose=True)
 
   # endregion: Public Methods
 
