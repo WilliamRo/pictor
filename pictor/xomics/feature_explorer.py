@@ -263,8 +263,8 @@ class FeatureExplorer(Plotter):
     ax.set_ylabel(self.target_labels[0])
 
     olsr = self.omix.calc_OLS_result(x, print_summary=False)
-    pval = olsr.pvalues[1]
-    ax.set_title(f'P-value = {pval:.3g}')
+    title = f'$R^2$={olsr.rsquared:.3f}, $p$-value(F)={olsr.f_pvalue:.3g}'
+    ax.set_title(title)
 
     # plot confidence limits
     ax.fill_between(p_x, lower, upper, alpha=0.4,
@@ -413,7 +413,7 @@ class FeatureExplorer(Plotter):
     console.show_status('Sorting by p-values ...')
     with self.pictor.busy('Sorting ...'):
       if self.omix.targets_are_numerical:
-        indices = np.argsort([r.pvalues[1] for r in self.omix.OLS_reports])
+        indices = np.argsort([r.f_pvalue for r in self.omix.OLS_reports])
       else: indices = np.argsort(
         [r[0][2] for r in self.omix.single_factor_analysis_reports])
     sorted_omix = self.omix.get_sub_space(indices, start_from_1=False)
