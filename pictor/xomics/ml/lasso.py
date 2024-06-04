@@ -32,13 +32,20 @@ class Lasso(MLEngine):
     verbose = kwargs.get('verbose', self.verbose)
     threshold = kwargs.get('threshold', 0.001)
     plot_path = kwargs.get('plot_path', False)
+    alpha = kwargs.get('alpha', None)
 
     # (1) Tune hyperparameters
-    self.tune_hyperparameters(omix, **kwargs)
-    if plot_path: self.tune_alpha(omix, **kwargs)
+    if alpha is None:
+      if plot_path:
+        alpha = self.tune_alpha(omix, **kwargs)
+        hp = {'alpha': alpha}
+      else:
+        hp = self.tune_hyperparameters(omix, **kwargs)
+    else:
+      hp = {'alpha': alpha}
 
     # (2) Fit model and get importance
-    lasso = self.fit(omix, **kwargs)
+    lasso = self.fit(omix, hp=hp, **kwargs)
     importance = np.abs(lasso.coef_)
 
     if verbose > 1: self.plot_importance(importance, omix.feature_labels)
@@ -86,7 +93,7 @@ class Lasso(MLEngine):
     lasso_cv.fit(X, y)
 
     best_alpha = lasso_cv.alpha_
-    self.best_hp['alpha'] = best_alpha
+    # self.best_hp['alpha'] = best_alpha
     if not kwargs.get('plot_path'): return
 
     # (3) Plot path
@@ -94,7 +101,7 @@ class Lasso(MLEngine):
     vl_color = '#bd3831'
 
     alphas, coefs, dual_gaps = lasso_path(X, y, alphas=alphas)
-    log_alphas = np.log(alphas)
+    log_alphas = np.log10(alphas)
 
     # Set plot style
     # plt.style.use('ggplot')
@@ -104,12 +111,12 @@ class Lasso(MLEngine):
     ax1 = fig.add_subplot(1, 2, 1)
     for coef in coefs: ax1.plot(log_alphas, coef, lw=2)
 
-    ax1.axvline(np.log(best_alpha), linestyle='--', color=vl_color,
+    ax1.axvline(np.log10(best_alpha), linestyle='--', color=vl_color,
                 label=rf'Best $\alpha$: {best_alpha:.4f}')
     # ax2 = plt.gca().twinx()
     # ax2.plot(log_alphas, dual_gaps, ':', color='k', label='Dual Gaps')
 
-    ax1.set_xlabel(r'Log($\alpha$)')
+    ax1.set_xlabel(r'Log$_{10}(\alpha$)')
     ax1.set_ylabel('Features')
     ax1.set_title('LASSO Paths')
     ax1.grid(True)
@@ -124,9 +131,9 @@ class Lasso(MLEngine):
     ax2.errorbar(log_alphas, mse_mus, yerr=mse_stds, fmt='o',
                  mfc='r', mec='r', ecolor='#AAA', capsize=3, ms=3,)
 
-    ax2.axvline(np.log(best_alpha), linestyle='--', color=vl_color)
+    ax2.axvline(np.log10(best_alpha), linestyle='--', color=vl_color)
 
-    ax2.set_xlabel(r'Log($\alpha$)')
+    ax2.set_xlabel(r'Log$_{10}(\alpha$)')
     ax2.set_ylabel('Mean Squared Error (MSE)')
     # ax2.grid(True)
     # ax2.set_title('LASSO Paths')
@@ -135,4 +142,6 @@ class Lasso(MLEngine):
 
     plt.tight_layout()
     plt.show()
+
+    return best_alpha
 
