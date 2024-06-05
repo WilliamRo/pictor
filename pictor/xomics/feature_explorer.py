@@ -310,7 +310,7 @@ class FeatureExplorer(Plotter):
     self.select_features('PCA', n_components=n_components,
                          standardize=standardize)
 
-  def sf_lasso(self, verbose: int=0, plot_path: int=0, lasso_repeats=10,
+  def sf_lasso(self, verbose: int=0, plot_path: int=0, lasso_repeats:int =10,
                n_splits: int=5, strategy: str='grid', random_state: int=None,
                threshold: float=0.001, min_alpha_exp: int=-7,
                max_alpha_exp: int=1, n_alphas: int=100, standardize: int=1,
@@ -527,7 +527,9 @@ class FeatureExplorer(Plotter):
         for i, df in enumerate(self.omix.data_frames):
           if i == 0: sheet_name = 'Features'
           elif i == 1: sheet_name = 'Targets'
-          else: sheet_name = f'Target-Collection-{i - 1}'
+          else:
+            # Consistent with the format in Omix.load
+            sheet_name = f'Target-Collection-{i - 1}'
           df.to_excel(writer, sheet_name=sheet_name)
 
       console.show_status(f'{self.omix.data_name} exported to `{file_path}`.')

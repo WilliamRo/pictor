@@ -243,13 +243,29 @@ class Omix(Nomear):
       data_frames = pd.read_excel(file_path, sheet_name=None)
       data_name = os.path.basename(file_path).split('.')[0]
 
-      # Read features
+      # (1) Read features
       df = data_frames.pop('Features')
       feature_labels = df.columns.tolist()[1:]
       sample_labels = df.index.tolist()
       features = df.values[:, 1:]
 
-      # Read targets
+      # Find legal indices from the first row
+      indices, illegal_indices = [], []
+      for i in range(features.shape[1]):
+        try:
+          np.float32(features[0, i])
+          indices.append(i)
+        except:
+          illegal_indices.append(i)
+
+      features = np.array(features[:, indices], dtype=np.float32)
+      if verbose:
+        console.show_info(f'Illegal feature labels:')
+        for i in illegal_indices:
+          console.supplement(f'{feature_labels[i]}', level=2)
+      feature_labels = [feature_labels[i] for i in indices]
+
+      # (2) Read targets
       df = data_frames.pop('Targets')
       targets = df.values[:, 1:].flatten()
       target_labels = df.columns.tolist()[1].split(',')[1:]
@@ -260,6 +276,8 @@ class Omix(Nomear):
 
       # Read target collections
       for key, df in data_frames.items():
+        # Consistent with the format in FeatureExplorer.save()
+        if not key.startswith('Target-Collection-'): continue
         targets = df.values[:, 1:].flatten()
         mass = df.columns.tolist()[1].split(',')
         target_key = mass[0]
