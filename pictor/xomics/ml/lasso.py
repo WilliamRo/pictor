@@ -117,10 +117,12 @@ class Lasso(MLEngine):
     mean_path = np.mean(merged_mse_path, axis=1)
     # !! Note here, the order of mean_path has been reversed
     mean_path = mean_path[::-1]
+    best_mmse = np.min(mean_path)
     best_alpha = alphas[np.argmin(mean_path)]
 
     if verbose: console.show_status(
-      f'Best alpha = {best_alpha}.', prompt=prompt)
+      f'Best alpha = {best_alpha:.4f}. '
+      f'Best mean(MSE) = {best_mmse:.4f}', prompt=prompt)
 
     # (2.2) Sanity check / return
     if n_repeats == 1: assert best_alpha == lasso_cv.alpha_
@@ -160,14 +162,12 @@ class Lasso(MLEngine):
     ax2.errorbar(log_alphas, mse_mus, yerr=mse_stds, fmt='o',
                  mfc='r', mec='r', ecolor='#AAA', capsize=3, ms=3,)
 
-    ax2.axvline(np.log10(best_alpha), linestyle='--', color=vl_color)
+    ax2.axvline(np.log10(best_alpha), linestyle='--', color=vl_color,
+                label=rf'Best mean(MSE): {best_mmse:.4f}')
 
     ax2.set_xlabel(r'Log$_{10}(\alpha$)')
     ax2.set_ylabel('Mean Squared Error (MSE)')
-    # ax2.grid(True)
-    # ax2.set_title('LASSO Paths')
-
-    # ax2.legend()
+    ax2.legend()
 
     plt.tight_layout()
     plt.show()
