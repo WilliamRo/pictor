@@ -436,10 +436,10 @@ class FeatureExplorer(Plotter):
         return
     console.show_status(f'No feature found with key `{key}`.')
 
-  def filter_by_name(self, key: str):
+  def filter_by_name(self, key: str, include: int = 1):
     """Filter features by their name"""
     keys = key.split(',')
-    omix = self.omix.filter_by_name(keys)
+    omix = self.omix.filter_by_name(keys, include=include == 1)
     omix.show_in_explorer()
   fbn = filter_by_name
 

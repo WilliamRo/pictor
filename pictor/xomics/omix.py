@@ -210,16 +210,15 @@ class Omix(Nomear):
       features=self.features[:, indices],
       feature_labels=[self.feature_labels[i] for i in indices])
 
-  def filter_by_name(self, keywords: List[str]):
+  def filter_by_name(self, keywords: List[str], include=True):
     """Filter features by keywords in feature_labels"""
     if not isinstance(keywords, list): keywords = [keywords]
 
     indices = []
     for i, label in enumerate(self.feature_labels):
-      for key in keywords:
-        if key.lower() in label.lower():
-          indices.append(i)
-          continue
+      matched = any([key.lower() in label.lower() for key in keywords])
+      if matched and include: indices.append(i)
+      elif not matched and not include: indices.append(i)
     return self.get_sub_space(indices, start_from_1=False)
 
   # endregion: Feature Selection
@@ -249,11 +248,15 @@ class Omix(Nomear):
       sample_labels = df.index.tolist()
       features = df.values[:, 1:]
 
-      # Find legal indices from the first row
+      # (1.1) Find legal indices from the first row
       indices, illegal_indices = [], []
       for i in range(features.shape[1]):
         try:
+          # (1.1.1) Exclude non-numerical values
           np.float32(features[0, i])
+          # (1.1.2) Exclude columns with NaN
+          x = np.array(features[:, i], dtype=np.float32)
+          if np.isnan(x).any(): raise ValueError
           indices.append(i)
         except:
           illegal_indices.append(i)
