@@ -36,11 +36,14 @@ class Lasso(MLEngine):
 
     # (1) Tune hyperparameters
     if alpha is None:
-      if plot_path:
-        alpha = self.tune_alpha(omix, **kwargs)
-        hp = {'alpha': alpha}
-      else:
-        hp = self.tune_hyperparameters(omix, **kwargs)
+      alpha = self.tune_alpha(omix, **kwargs)
+      hp = {'alpha': alpha}
+
+      # if plot_path:
+      #   alpha = self.tune_alpha(omix, **kwargs)
+      #   hp = {'alpha': alpha}
+      # else:
+      #   hp = self.tune_hyperparameters(omix, **kwargs)
     else:
       hp = {'alpha': alpha}
 
@@ -81,27 +84,47 @@ class Lasso(MLEngine):
   def tune_alpha(self, omix: Omix, alphas=DEFAULT_HP_SPACE['alpha'],
                  **kwargs):
     from sklearn.linear_model import LassoCV, lasso_path
+    from sklearn.model_selection import KFold
     import matplotlib.pyplot as plt
 
     # (1) Get settings
     random_state = kwargs.get('random_state', None)
     n_splits = kwargs.get('n_splits', 5)
-    X, y = omix.features, omix.targets
+    n_repeats = kwargs.get('lasso_repeats', 1)
+    if random_state is not None: n_repeats = 1
+
+    log_alphas = np.log10(alphas)
 
     # (2) Generate path
-    lasso_cv = LassoCV(alphas=alphas, cv=n_splits, random_state=random_state)
-    lasso_cv.fit(X, y)
+    X, y = omix.features, omix.targets
 
-    best_alpha = lasso_cv.alpha_
-    # self.best_hp['alpha'] = best_alpha
+    lasso_cv_list = []
+    for _ in range(n_repeats):
+      kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+      lasso_cv = LassoCV(alphas=alphas, cv=kf, random_state=random_state)
+      lasso_cv.fit(X, y)
+      lasso_cv_list.append(lasso_cv)
+
+    # (2.1) Select the best alpha
+    mse_paths = [lasso_cv.mse_path_ for lasso_cv in lasso_cv_list]
+    merged_mse_path = np.concatenate(mse_paths, axis=1)
+    mean_path = np.mean(merged_mse_path, axis=1)
+    # !! Note here, the order of mean_path has been reversed
+    mean_path = mean_path[::-1]
+    best_alpha = alphas[np.argmin(mean_path)]
+
+    # (2.2) Sanity check / return
+    if n_repeats == 1: assert best_alpha == lasso_cv.alpha_
+
     if not kwargs.get('plot_path'): return
 
     # (3) Plot path
     # vl_color = '#5b79ca'
     vl_color = '#bd3831'
 
-    alphas, coefs, dual_gaps = lasso_path(X, y, alphas=alphas)
-    log_alphas = np.log10(alphas)
+    # !! Note here, alpha_p is a reverse of alphas
+    alphas_p, coefs, dual_gaps = lasso_path(X, y, alphas=alphas)
+    log_alphas_p = np.log10(alphas_p)
 
     # Set plot style
     # plt.style.use('ggplot')
@@ -109,23 +132,20 @@ class Lasso(MLEngine):
 
     # (3.1) Plot the best alpha found by LassoCV
     ax1 = fig.add_subplot(1, 2, 1)
-    for coef in coefs: ax1.plot(log_alphas, coef, lw=2)
+    for coef in coefs: ax1.plot(log_alphas_p, coef, lw=2)
 
     ax1.axvline(np.log10(best_alpha), linestyle='--', color=vl_color,
                 label=rf'Best $\alpha$: {best_alpha:.4f}')
-    # ax2 = plt.gca().twinx()
-    # ax2.plot(log_alphas, dual_gaps, ':', color='k', label='Dual Gaps')
 
     ax1.set_xlabel(r'Log$_{10}(\alpha$)')
     ax1.set_ylabel('Features')
     ax1.set_title('LASSO Paths')
     ax1.grid(True)
-    # plt.grid(True)
     ax1.legend()
 
     # (3.2)
-    mse_mus = np.apply_along_axis(np.mean, 1, lasso_cv.mse_path_)
-    mse_stds = np.apply_along_axis(np.std, 1, lasso_cv.mse_path_)
+    mse_mus = mean_path
+    mse_stds = np.std(merged_mse_path, axis=1)
 
     ax2 = fig.add_subplot(1, 2, 2)
     ax2.errorbar(log_alphas, mse_mus, yerr=mse_stds, fmt='o',
