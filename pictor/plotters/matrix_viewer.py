@@ -22,12 +22,13 @@ import numpy as np
 
 class MatrixViewer(Plotter):
 
-  def __init__(self, matrices, row_keys, col_keys, pictor=None):
+  def __init__(self, matrices, row_keys, col_keys, pictor=None, values=None):
     # Call parent's constructor
     super(MatrixViewer, self).__init__(self.matshow, pictor)
 
     # Specific attributes
     self.matrices = matrices
+    self.values = values
     self.row_keys = row_keys
     self.col_keys = col_keys
 
@@ -35,10 +36,12 @@ class MatrixViewer(Plotter):
     self.new_settable_attr('color_bar', True, bool, 'Color bar')
     self.new_settable_attr('cmap', 'Blues', str, 'Color map')
     self.new_settable_attr('title', True, bool, 'Whether to show title')
-    self.new_settable_attr('digit', 3, int, 'Digits after decimal point')
+    self.new_settable_attr('digit', 2, int, 'Digits after decimal point')
 
     self.new_settable_attr('auto_fcolor', True, bool, 'Auto flip font color')
-    self.new_settable_attr('wt', 0.7, float, 'While font threshold')
+    self.new_settable_attr('wt', 0.7, float, 'White font threshold')
+    self.new_settable_attr('ci', False, bool, 'Option to show CI95')
+    self.new_settable_attr('fontsize', 8, int, 'Font size')
 
 
   def matshow(self, ax: plt.Axes, x: str, fig: plt.Figure):
@@ -49,12 +52,24 @@ class MatrixViewer(Plotter):
     d = self.get('digit')
     for i in range(matrix.shape[0]):
       for j in range(matrix.shape[1]):
+        # Choose font color
         color = '#000'
         if self.get('auto_fcolor'):
           wt = matrix.min() + (matrix.max() - matrix.min()) * self.get('wt')
           color = '#FFF' if matrix[i, j] > wt else '#000'
-        ax.text(j, i, f'{matrix[i, j]:.{d}f}', ha='center', va='center',
-                color=color)
+
+        text = f'{matrix[i, j]:.{d}f}'
+        if self.get('ci') and self.values is not None:
+          import scipy.stats as st
+
+          mu = matrix[i, j]
+          values = self.values[x][i][j]
+          assert np.mean(values) == mu
+          l, h = st.t.interval(0.95, len(values)-1, loc=mu,
+                               scale=st.sem(values))
+          text += f'\n [{l:.{d}f},{h:.{d}f}]'
+        ax.text(j, i, text, ha='center', va='center',
+                fontsize=self.get('fontsize'), color=color)
 
     if self.get('title'): ax.set_title(x)
 
@@ -78,16 +93,18 @@ class MatrixViewer(Plotter):
       'C', lambda: self.flip('color_bar'), 'Turn on/off color bar')
     self.register_a_shortcut(
       'A', lambda: self.flip('auto_fcolor'), 'Turn on/off auto_fcolor')
+    self.register_a_shortcut('I', lambda: self.flip('ci'), 'Turn on/off ci')
 
 
   @classmethod
-  def show_matrices(cls, matrix_dict, row_keys, col_keys, fig_size=(5, 5)):
+  def show_matrices(cls, matrix_dict, row_keys, col_keys, fig_size=(5, 5),
+                    values=None):
     from pictor.pictor import Pictor
 
     p = Pictor('Matrix Viewer', figure_size=fig_size)
     p.objects = list(matrix_dict.keys())
 
-    mv = cls(matrix_dict, row_keys, col_keys, pictor=p)
+    mv = cls(matrix_dict, row_keys, col_keys, pictor=p, values=values)
     p.add_plotter(mv)
 
     p.show()

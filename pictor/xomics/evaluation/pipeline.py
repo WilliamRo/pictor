@@ -204,13 +204,17 @@ class Pipeline(Nomear):
 
     # Generate matrices
     matrices = OrderedDict()
+    value_dict = OrderedDict()
     for key in metrics:
       matrices[key] = np.zeros((len(row_labels), len(col_labels)))
+      value_dict[key] = OrderedDict()
       for r, sf_key in enumerate(row_labels):
+        value_dict[key][r] = OrderedDict()
         for c, ml_key in enumerate(col_labels):
           pkg_list = matrix_dict[(sf_key, ml_key)]
           values = [p[key] for p in pkg_list]
           matrices[key][r, c] = np.mean(values)
+          value_dict[key][r][c] = values
 
     # Plot matrices
     from pictor.plotters.matrix_viewer import MatrixViewer
@@ -219,6 +223,7 @@ class Pipeline(Nomear):
     row_labels = [rl.upper() for rl in row_labels]
     col_labels = [abbreviation_dict[cl] for cl in col_labels]
 
-    MatrixViewer.show_matrices(matrices, row_labels, col_labels, fig_size)
+    MatrixViewer.show_matrices(matrices, row_labels, col_labels, fig_size,
+                               values=value_dict)
 
   # endregion: Public Methods
