@@ -310,8 +310,8 @@ class FeatureExplorer(Plotter):
     self.select_features('PCA', n_components=n_components,
                          standardize=standardize)
 
-  def sf_lasso(self, verbose: int=0, plot_path: int=0, n_splits: int=5,
-               strategy: str='grid', random_state: int=None,
+  def sf_lasso(self, verbose: int=0, plot_path: int=0, lasso_repeats=10,
+               n_splits: int=5, strategy: str='grid', random_state: int=None,
                threshold: float=0.001, min_alpha_exp: int=-7,
                max_alpha_exp: int=1, n_alphas: int=100, standardize: int=1,
                n_jobs:int =10, save_model: int=0):
@@ -324,7 +324,7 @@ class FeatureExplorer(Plotter):
       'Lasso', n_splits=n_splits, strategy=strategy, hp_space=hp_space,
       random_state=random_state, threshold=threshold, verbose=verbose,
       standardize=standardize, n_jobs=n_jobs, plot_path=plot_path,
-      save_model=save_model)
+      save_model=save_model, lasso_repeats=lasso_repeats)
 
   def sf_mrmr(self, k=10, standardize=1):
     """Feature selection using mRMR.

@@ -13,6 +13,7 @@
 # limitations under the License.
 # ====-====================================================================-====
 from pictor.xomics.ml.ml_engine import MLEngine, Omix
+from roma import console
 from sklearn.linear_model import Lasso as SKLasso
 
 import numpy as np
@@ -93,12 +94,17 @@ class Lasso(MLEngine):
     n_repeats = kwargs.get('lasso_repeats', 1)
     if random_state is not None: n_repeats = 1
 
+    verbose = kwargs.get('verbose', 0)
     log_alphas = np.log10(alphas)
+
+    prompt = '[LASSO]'
 
     # (2) Generate path
     X, y = omix.features, omix.targets
 
     lasso_cv_list = []
+    if verbose: console.show_status(
+      f'Tuning alpha ({n_repeats} repeats) ...', prompt=prompt)
     for _ in range(n_repeats):
       kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
       lasso_cv = LassoCV(alphas=alphas, cv=kf, random_state=random_state)
@@ -113,10 +119,13 @@ class Lasso(MLEngine):
     mean_path = mean_path[::-1]
     best_alpha = alphas[np.argmin(mean_path)]
 
+    if verbose: console.show_status(
+      f'Best alpha = {best_alpha}.', prompt=prompt)
+
     # (2.2) Sanity check / return
     if n_repeats == 1: assert best_alpha == lasso_cv.alpha_
 
-    if not kwargs.get('plot_path'): return
+    if not kwargs.get('plot_path'): return best_alpha
 
     # (3) Plot path
     # vl_color = '#5b79ca'
