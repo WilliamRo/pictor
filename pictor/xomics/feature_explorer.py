@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ====-======================================================================-==
+from collections import OrderedDict
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pictor.xomics.stat_annotator import Annotator
 from pictor.xomics.omix import Omix
@@ -448,6 +449,27 @@ class FeatureExplorer(Plotter):
     omix.show_in_explorer()
   fbn = filter_by_name
 
+  def dca(self, indices: str = None):
+    """Perform decision curve analysis on given indices"""
+    from pictor.xomics.evaluation.dca import DCA
+
+    assert len(self.target_labels) == 2, 'DCA only supports binary classification.'
+
+    if indices is None:
+      indices = [self.pictor.cursors[self.pictor.Keys.OBJECTS]]
+    else: indices = [int(s) - 1 for s in indices.split(',')]
+
+    prob_dict = OrderedDict()
+    for i in indices:
+      features = self.features[:, i]
+      groups = [features[self.targets == j]
+                for j, _ in enumerate(self.target_labels)]
+      if np.mean(groups[0]) > np.mean(groups[1]): features = -features
+      prob_dict[self.feature_labels[i]] = features
+
+    dca = DCA(prob_dict, self.targets)
+    dca.plot_dca()
+
   def register_shortcuts(self):
     self.register_a_shortcut(
       'a', lambda: self.flip('statanno'), 'Toggle statanno')
@@ -461,6 +483,7 @@ class FeatureExplorer(Plotter):
 
     - cp: cross_plots, plot cross plots
     - cop: correlation_plot, plot correlation matrix
+    - dca: perform decision curve analysis
     - fbn: filter_by_name, filter features by name
     - find: find next feature by name
     - mp: multi_plots, plot multiple features at one figure
