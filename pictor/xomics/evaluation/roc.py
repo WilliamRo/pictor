@@ -13,7 +13,9 @@
 # limitations under the License.
 # ===-=======================================================================-==
 import matplotlib.pyplot as plt
+import numpy as np
 
+from . import delong
 from roma import Nomear
 
 
@@ -49,16 +51,28 @@ class ROC(Nomear):
       ax: plt.Axes = fig.add_subplot(111)
 
     ax.plot([0, 1], [0, 1], c='grey', alpha=0.5, linestyle='--')
-    ax.plot(fpr, tpr, label=f'AUC = {auc:.3f}')
+
+    l, h = self.calc_CI()
+    legend = f'AUC={auc:.3f}, CI(95%)=[{l:.3f}, {h:.3f}]'
+
+    ax.plot(fpr, tpr, label=legend)
     ax.set_xlabel('False Positive Rate')
     ax.set_ylabel('True Positive Rate')
 
     if label is not None: ax.set_title(label)
 
-    ax.legend()
+    ax.legend(fontsize=kwargs.get('fontsize', 10))
     ax.grid(True)
 
     if plt_show:
       plt.tight_layout()
       plt.show()
+
+  def calc_CI(self, alpha=0.95):
+    import scipy.stats as st
+
+    auc_0, delong_cov = delong.delong_roc_variance(self.targets, self.probs)
+    q1, q2 = (1 - alpha) / 2, (1 + alpha) / 2
+    l, h = st.norm.ppf([q1, q2], loc=auc_0, scale=np.sqrt(delong_cov))
+    return max(0, l), min(1, h)
 
