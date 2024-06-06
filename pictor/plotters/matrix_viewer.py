@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==-=======================================================================-===
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from ..xomics.stat_analyzers import calc_CI
 from .plotter_base import Plotter
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -60,13 +61,10 @@ class MatrixViewer(Plotter):
 
         text = f'{matrix[i, j]:.{d}f}'
         if self.get('ci') and self.values is not None:
-          import scipy.stats as st
-
           mu = matrix[i, j]
           values = self.values[x][i][j]
           assert np.mean(values) == mu
-          l, h = st.t.interval(0.95, len(values)-1, loc=mu,
-                               scale=st.sem(values))
+          l, h = calc_CI(values, alpha=0.95, vmin=0., vmax=1.)
           text += f'\n [{l:.{d}f},{h:.{d}f}]'
         ax.text(j, i, text, ha='center', va='center',
                 fontsize=self.get('fontsize'), color=color)

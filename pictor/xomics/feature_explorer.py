@@ -138,7 +138,8 @@ class FeatureExplorer(Plotter):
 
   cp = cross_plots
 
-  def correlation_plot(self, show_name: int=1, cmap: str='RdBu'):
+  def correlation_plot(self, show_name: int=1, show_ylabel_only: int=0,
+                       cmap: str='RdBu'):
     """Plot correlation matrix"""
     # Calculate correlation matrix (consider sorted indices)
     indices = np.array(self.pictor.objects)
@@ -152,9 +153,12 @@ class FeatureExplorer(Plotter):
     if show_name:
       ticks = np.arange(len(self.feature_labels))
       feature_labels = [self.feature_labels[i] for i in indices]
-      ax.set_xticks(ticks=ticks, labels=feature_labels)
-      fig.autofmt_xdate(rotation=45)
       ax.set_yticks(ticks=ticks, labels=feature_labels)
+      if not show_ylabel_only:
+        ax.set_xticks(ticks=ticks, labels=feature_labels)
+        fig.autofmt_xdate(rotation=45)
+      else:
+        ax.set_xticks([])
     else:
       ax.set_xticks([])
       ax.set_yticks([])
@@ -172,6 +176,7 @@ class FeatureExplorer(Plotter):
 
   def plot(self, x, ax: plt.Axes, max_title_len=999, **kwargs):
     features = self.features[:, x]
+    title = self.feature_labels[x][:max_title_len]
 
     # (Option-0) Plot line fit if required
     if self.omix.targets_are_numerical:
@@ -187,7 +192,7 @@ class FeatureExplorer(Plotter):
       from pictor.xomics.evaluation.roc import ROC
       if np.mean(groups[0]) > np.mean(groups[1]): features = -features
       roc = ROC(features, self.targets)
-      roc.plot_roc(ax)
+      roc.plot_roc(ax, label=title)
       return
 
     # (Option-2) Plot boxplot
@@ -201,7 +206,7 @@ class FeatureExplorer(Plotter):
                  positions=range(len(groups)))
       ax.set_xticklabels(self.target_labels)
 
-    ax.set_title(self.feature_labels[x][:max_title_len])
+    ax.set_title(title)
 
     # Show statistical annotation if required
     if self.get('statanno') and all([len(g) > 1 for g in groups]):
@@ -312,7 +317,7 @@ class FeatureExplorer(Plotter):
 
   def sf_lasso(self, verbose: int=0, plot_path: int=0, lasso_repeats:int =10,
                n_splits: int=5, strategy: str='grid', random_state: int=None,
-               threshold: float=0.001, min_alpha_exp: int=-7,
+               threshold: float=0.001, min_alpha_exp: int=-7, xmax: float=None,
                max_alpha_exp: int=1, n_alphas: int=100, standardize: int=1,
                n_jobs:int =10, save_model: int=0):
     """Feature selection using Lasso regression.
@@ -324,7 +329,7 @@ class FeatureExplorer(Plotter):
       'Lasso', n_splits=n_splits, strategy=strategy, hp_space=hp_space,
       random_state=random_state, threshold=threshold, verbose=verbose,
       standardize=standardize, n_jobs=n_jobs, plot_path=plot_path,
-      save_model=save_model, lasso_repeats=lasso_repeats)
+      save_model=save_model, lasso_repeats=lasso_repeats, xmax=xmax)
 
   def sf_mrmr(self, k=10, standardize=1):
     """Feature selection using mRMR.

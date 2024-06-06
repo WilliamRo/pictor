@@ -92,6 +92,7 @@ class Lasso(MLEngine):
     random_state = kwargs.get('random_state', None)
     n_splits = kwargs.get('n_splits', 5)
     n_repeats = kwargs.get('lasso_repeats', 1)
+    xmax = kwargs.get('xmax', None)
     if random_state is not None: n_repeats = 1
 
     verbose = kwargs.get('verbose', 0)
@@ -114,9 +115,9 @@ class Lasso(MLEngine):
     # (2.1) Select the best alpha
     mse_paths = [lasso_cv.mse_path_ for lasso_cv in lasso_cv_list]
     merged_mse_path = np.concatenate(mse_paths, axis=1)
-    mean_path = np.mean(merged_mse_path, axis=1)
     # !! Note here, the order of mean_path has been reversed
-    mean_path = mean_path[::-1]
+    merged_mse_path = merged_mse_path[::-1]
+    mean_path = np.mean(merged_mse_path, axis=1)
     best_mmse = np.min(mean_path)
     best_alpha = alphas[np.argmin(mean_path)]
 
@@ -148,6 +149,7 @@ class Lasso(MLEngine):
     ax1.axvline(np.log10(best_alpha), linestyle='--', color=vl_color,
                 label=rf'Best $\alpha$: {best_alpha:.4f}')
 
+    ax1.set_xlim([None, xmax])
     ax1.set_xlabel(r'Log$_{10}(\alpha$)')
     ax1.set_ylabel('Features')
     ax1.set_title('LASSO Paths')
@@ -165,6 +167,7 @@ class Lasso(MLEngine):
     ax2.axvline(np.log10(best_alpha), linestyle='--', color=vl_color,
                 label=rf'Best mean(MSE): {best_mmse:.4f}')
 
+    ax2.set_xlim([None, xmax])
     ax2.set_xlabel(r'Log$_{10}(\alpha$)')
     ax2.set_ylabel('Mean Squared Error (MSE)')
     ax2.legend()

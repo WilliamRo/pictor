@@ -81,6 +81,15 @@ def test_normality(x, method='auto', verbose=False, return_details=False,
   return test_result
 
 
+def calc_CI(values, alpha=0.95, vmin=None, vmax=None):
+  import scipy.stats as st
+  mu, sem = np.mean(values), st.sem(values)
+  l, h = st.t.interval(alpha, len(values) - 1, loc=mu, scale=sem)
+  if vmin is not None: l = max(l, vmin)
+  if vmax is not None: h = min(h, vmax)
+  return l, h
+
+
 
 if __name__ == '__main__':
   from scipy import stats

@@ -36,7 +36,7 @@ class ROC(Nomear):
     fpr, tpr, _ = self.roc_curve
     return auc(fpr, tpr)
 
-  def plot_roc(self, ax: plt.Axes=None, **kwargs):
+  def plot_roc(self, ax: plt.Axes=None, label=None, **kwargs):
     import matplotlib.pyplot as plt
 
     fpr, tpr, _ = self.roc_curve
@@ -49,11 +49,13 @@ class ROC(Nomear):
       ax: plt.Axes = fig.add_subplot(111)
 
     ax.plot([0, 1], [0, 1], c='grey', alpha=0.5, linestyle='--')
-    ax.plot(fpr, tpr)
+    ax.plot(fpr, tpr, label=f'AUC = {auc:.3f}')
     ax.set_xlabel('False Positive Rate')
     ax.set_ylabel('True Positive Rate')
-    ax.set_title(f'AUC = {auc:.3f}')
 
+    if label is not None: ax.set_title(label)
+
+    ax.legend()
     ax.grid(True)
 
     if plt_show:

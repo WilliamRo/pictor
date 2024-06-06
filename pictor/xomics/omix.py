@@ -499,11 +499,13 @@ class Omix(Nomear):
 
     features = np.concatenate((self.features, other.features), axis=1)
     assert all(self.targets == other.targets), '!! targets must be the same'
-    assert all(self.sample_labels == other.sample_labels), '!! sample_labels must be the same'
+    ssl, osl = [np.array(om.sample_labels) for om in (self, other)]
+    assert all(ssl == osl), '!! sample_labels must be the same'
 
     if self._feature_labels is None and other._feature_labels is None:
       feature_labels = None
-    else: feature_labels = self.feature_labels + other.feature_labels
+    else: feature_labels = np.concatenate(
+      [self.feature_labels, other.feature_labels])
 
     assert self.target_labels == other.target_labels, '!! target_labels must be the same'
 

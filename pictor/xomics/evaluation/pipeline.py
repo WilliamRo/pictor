@@ -14,6 +14,7 @@
 # ====-====================================================================-====
 from collections import OrderedDict
 from pictor.xomics.omix import Omix
+from pictor.xomics.stat_analyzers import calc_CI
 from roma import console
 from roma import Nomear
 
@@ -175,8 +176,6 @@ class Pipeline(Nomear):
     return row_labels, col_labels, matrix_dict
 
   def report(self, metrics=('AUC', 'F1')):
-    import scipy.stats as st
-
     console.section('Pipeline Report')
     row_labels, col_labels, matrix_dict = self.get_pkg_matrix()
     for sf_key in row_labels:
@@ -189,7 +188,7 @@ class Pipeline(Nomear):
         for key in metrics:
           values = [p[key] for p in pkg_list]
           mu = np.mean(values)
-          CI1, CI2 = st.t.interval(0.95, n_pkg-1, loc=mu, scale=st.sem(values))
+          CI1, CI2 = calc_CI(values, alpha=0.95, vmin=0., vmax=1.)
           info = f'Avg({key}) over {n_pkg} trials: {mu:.3f}'
           info += f', CI95% = [{CI1:.3f}, {CI2:.3f}]'
           console.supplement(info, level=4)
