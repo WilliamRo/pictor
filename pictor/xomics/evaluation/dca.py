@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-=====================================================================-====
-import matplotlib.pyplot as plt
-import numpy as np
-
 from collections import OrderedDict
 from roma import Nomear
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 
@@ -95,7 +95,7 @@ class DCA(Nomear):
     # tps = np.r_[0, tps]
     # fps = np.r_[0, fps]
     # thresholds = np.r_[max(thresholds[0], 1 - 1e-10), thresholds]
-    #
+
     from sklearn.metrics._ranking import _binary_clf_curve
 
     fps, tps, thresholds = _binary_clf_curve(self.targets, prob, pos_label=1)

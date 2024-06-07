@@ -145,11 +145,14 @@ class Pipeline(Nomear):
     return omix.get_from_pocket(
       'pp::fit_packages::24ma14', initializer=lambda: OrderedDict(), local=True)
 
-  def get_pkg_matrix(self):
+  def get_pkg_matrix(self, abbreviate=False):
+    from pictor.xomics.ml import abbreviation_dict
+
     row_labels, col_labels, matrix_dict = [], [], {}
 
     # For each sub-space
     for key, omix_list in self.sub_space_dict.items():
+      # key = ('sf_method_name', (('arg_1', arg_1_value), ...))
       sf_key = key[0]
 
       # Add feature number to specific methods
@@ -162,8 +165,12 @@ class Pipeline(Nomear):
       if sf_key not in row_labels: row_labels.append(sf_key)
 
       for omix in omix_list:
+        # {'model_name': [pkg_1, pkg_2, ...], ...}
         pkg_dict: OrderedDict = self.get_fit_packages(omix)
         for ml_key, pkg_list in pkg_dict.items():
+          # `LogisticRegression` -> `LR`
+          if abbreviate: ml_key = abbreviation_dict[ml_key]
+
           # Register ml_key if not exists
           if ml_key not in col_labels: col_labels.append(ml_key)
 
@@ -199,7 +206,7 @@ class Pipeline(Nomear):
     metrics = ['AUC', 'Sensitivity', 'Selectivity',
                'Balanced Accuracy', 'Accuracy', 'F1']
 
-    row_labels, col_labels, matrix_dict = self.get_pkg_matrix()
+    row_labels, col_labels, matrix_dict = self.get_pkg_matrix(abbreviate=True)
 
     # Generate matrices
     matrices = OrderedDict()
@@ -217,12 +224,26 @@ class Pipeline(Nomear):
 
     # Plot matrices
     from pictor.plotters.matrix_viewer import MatrixViewer
-    from pictor.xomics.ml import abbreviation_dict
 
     row_labels = [rl.upper() for rl in row_labels]
-    col_labels = [abbreviation_dict[cl] for cl in col_labels]
 
     MatrixViewer.show_matrices(matrices, row_labels, col_labels, fig_size,
                                values=value_dict)
+
+  def plot_calibration_curve(self, sf_method, *ml_methods, n_bins=10, **kwargs):
+    from pictor.xomics.evaluation.calibration import Calibrator
+
+    _, _, matrix_dict = self.get_pkg_matrix(abbreviate=True)
+
+    true_dict, prob_dict = OrderedDict(), OrderedDict()
+    for key in ml_methods:
+      mat_key = (sf_method, key)
+      assert mat_key in matrix_dict, f'No data for {mat_key}'
+      pkg_list = matrix_dict[mat_key]
+      true_dict[key] = [pkg.ROC.targets for pkg in pkg_list]
+      prob_dict[key] = [pkg.probabilities[:, 1] for pkg in pkg_list]
+
+    c = Calibrator(prob_dict, true_dict, **kwargs)
+    c.plot_calibration_curve(n_bins=n_bins)
 
   # endregion: Public Methods
