@@ -575,19 +575,27 @@ class FeatureExplorer(Plotter):
 
   # region: Pipeline Related Methods
 
-  def pipeline_grid_search(self, model, param_grid, n_splits=5, n_repeats=1,
-                           random_state=None, verbose=1, plot_path=0,
-                           save_model=0, n_jobs=10):   # TODO ---------------
+  def pipeline_grid_search(self):   # TODO ---------------
     """Perform grid search on the pipeline"""
     from pictor.xomics.evaluation.pipeline import Pipeline
 
-    Pipeline.grid_search(
-      model, param_grid, n_splits=n_splits, n_repeats=n_repeats,
-      random_state=random_state, verbose=verbose, plot_path=plot_path,
-      n_jobs=n_jobs)
-
     # Save omix
+  pgs = pipeline_grid_search
 
+  @staticmethod
+  def pipeline_report(plot_matrix: int=1):
+    """Report pipeline results"""
+    from pictor.xomics.evaluation.pipeline import Pipeline
+    import tkinter as tk
+
+    file_path = tk.filedialog.askopenfilename(
+      title='Open *.omix file', filetypes=[('OMIX files', '*.omix')])
+    if file_path is None: return
+
+    pi = Pipeline(Omix.load(file_path))
+    pi.report()
+    if plot_matrix: pi.plot_matrix()
+  pr = pipeline_report
 
   # endregion: Pipeline Related Methods
 
