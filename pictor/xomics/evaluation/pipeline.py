@@ -156,7 +156,7 @@ class Pipeline(Nomear):
       sf_key = key[0]
 
       # Add feature number to specific methods
-      if sf_key in ('pca', 'mrmr'):
+      if sf_key in ('pca', 'mrmr', 'sig', 'pval'):
         arg, val = key[1][0]
         if arg in ('n_components', 'k'):
           sf_key += f'-{val}'
@@ -247,3 +247,34 @@ class Pipeline(Nomear):
     c.plot_calibration_curve(n_bins=n_bins)
 
   # endregion: Public Methods
+
+  # region: Pipeline Methods
+
+  @staticmethod
+  def grid_search(omix, sf_methods=('lasso', 'sig'),
+                  ml_methods=('lr', 'svm', 'dt', 'rf', 'xgb'),
+                  k=None, sf_repeats=10, ml_repeats=10, config_str='',
+                  ignore_warnings=1, **kwargs):  # TODO --------------------
+    """Grid search for feature selection methods and machine learning methods.
+    """
+    pi = Pipeline(omix, ignore_warnings=ignore_warnings, save_models=0)
+
+    # (1) Load pre-defined settings
+    if sf_methods == '':
+      pass
+
+    if ml_methods == '':
+      pass
+
+    # (1.1) Sanity check
+    if isinstance(sf_methods, str): sf_methods = [sf_methods]
+    if isinstance(ml_methods, str): ml_methods = [ml_methods]
+
+    # (2) Create subspaces
+
+    # (-1) Report
+    pi.report()
+
+    return omix
+
+  # endregion: Pipeline Methods

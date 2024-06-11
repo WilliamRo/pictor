@@ -157,7 +157,9 @@ class Omix(Nomear):
     if method in ('pca', ):
       from sklearn.decomposition import PCA
 
-      n_components = kwargs.get('n_components', 10)
+      if 'n_components' not in kwargs:
+        n_components = kwargs.get('k', 10)
+      else: n_components = kwargs.get('n_components')
 
       model = PCA(n_components=n_components)
       feature_labels = [f'PC-{i + 1}' for i in range(n_components)]

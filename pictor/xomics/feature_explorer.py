@@ -573,6 +573,24 @@ class FeatureExplorer(Plotter):
     self.pictor.static_title = new_name
     self.refresh()
 
+  # region: Pipeline Related Methods
+
+  def pipeline_grid_search(self, model, param_grid, n_splits=5, n_repeats=1,
+                           random_state=None, verbose=1, plot_path=0,
+                           save_model=0, n_jobs=10):   # TODO ---------------
+    """Perform grid search on the pipeline"""
+    from pictor.xomics.evaluation.pipeline import Pipeline
+
+    Pipeline.grid_search(
+      model, param_grid, n_splits=n_splits, n_repeats=n_repeats,
+      random_state=random_state, verbose=verbose, plot_path=plot_path,
+      n_jobs=n_jobs)
+
+    # Save omix
+
+
+  # endregion: Pipeline Related Methods
+
   # endregion: Public Methods
 
 
