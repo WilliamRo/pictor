@@ -346,8 +346,8 @@ class FeatureExplorer(Plotter):
     with self.pictor.busy('Selecting features ...'):
       omix = self.omix.select_features(method, **kwargs)
 
-    title = f'{self.pictor.static_title} - {method}'
-    omix.show_in_explorer(title=title)
+    omix.data_name = f'{self.omix.data_name} - {method.upper()}'
+    omix.show_in_explorer()
 
   def switch_target(self, target_key: str, new_omix: int = 1):
     """Switch to a new target"""
@@ -565,6 +565,13 @@ class FeatureExplorer(Plotter):
       file_path = tk.filedialog.asksaveasfilename(
         title='Save as', filetypes=[('OMIX files', '*.omix')])
       if file_path is not None: self.omix.save(file_path, verbose=True)
+
+  def rename(self, new_name: str=None):
+    """Rename the current omix object"""
+    if new_name is None: return
+    self.omix.data_name = new_name
+    self.pictor.static_title = new_name
+    self.refresh()
 
   # endregion: Public Methods
 
