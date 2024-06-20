@@ -73,6 +73,7 @@ class Pipeline(Nomear):
     prompt = '[FEATURE SELECTION] >>'
 
     # if method == 'pca': assert repeats == 1, "Repeat PCA makes no sense."
+    if 'save_model' not in kwargs: kwargs['save_model'] = self.save_models
 
     # Initialize bag if not exists
     key = (method, tuple(sorted(tuple(kwargs.items()), key=lambda x: x[0])))

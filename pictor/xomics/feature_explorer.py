@@ -509,7 +509,7 @@ class FeatureExplorer(Plotter):
     - sf_mrmr: select features using mRMR
     - sf_rfe: select features using FRE
     """
-    self.select_features('indices', indices=indices)
+    self.select_features('indices', indices=indices, start_from_1=True)
 
   # endregion: Commands
 

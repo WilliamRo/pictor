@@ -26,6 +26,9 @@ import numpy as np
 
 class Omix(Nomear):
 
+  class Keys:
+    DimensionReducer = 'Omix::DimensionReducer'
+
   def __init__(self, features, targets, feature_labels=None, sample_labels=None,
                target_labels=None, data_name='Omix'):
     """features.shape = [n_samples, n_features]"""
@@ -117,7 +120,8 @@ class Omix(Nomear):
   def corr_matrix(self): return np.corrcoef(self.features, rowvar=False)
 
   @property
-  def sf_method(self): return self.get_from_pocket('sf_method')
+  def dimension_reducer(self):
+    return self.get_from_pocket(self.Keys.DimensionReducer)
 
   @property
   def data_frames(self):
@@ -149,62 +153,24 @@ class Omix(Nomear):
   # region: Feature Selection
 
   def select_features(self, method: str, **kwargs):
-    method = method.lower()
+    from pictor.xomics.ml.dr import get_reducer_class, DREngine
 
-    omix = self.standardize() if kwargs.get('standardize', 1) else self
+    # (0) Get configs
     save_model = kwargs.get('save_model', False)
 
-    if method in ('pca', ):
-      from sklearn.decomposition import PCA
+    # (1) Reduce dimension, return reduced omix
+    ReducerClass = get_reducer_class(method)
 
-      if 'n_components' not in kwargs:
-        n_components = kwargs.get('k', 10)
-      else: n_components = kwargs.get('n_components')
+    reducer: DREngine = ReducerClass(**kwargs)
+    reducer.fit_reducer(self, **kwargs)
+    omix_reduced = reducer.reduce_dimension(self, **kwargs)
 
-      model = PCA(n_components=n_components)
-      feature_labels = [f'PC-{i + 1}' for i in range(n_components)]
-      omix_reduced = self.duplicate(features=model.fit_transform(omix.features),
-                                    feature_labels=feature_labels)
-    elif method in ('lasso', ):
-      from pictor.xomics.ml.lasso import Lasso
-      model = Lasso(kwargs.get('verbose', 0))
-      omix_reduced = model.select_features(omix, **kwargs)
-    elif method in ('rfe', ):
-      from sklearn.feature_selection import RFE
-      from sklearn.svm import SVC
-      k = kwargs.get('k', 10)
-      estimator = SVC(kernel='linear')
-      selector = RFE(estimator, n_features_to_select=k, step=1)
-      selector = selector.fit(omix.features, omix.targets)
-      omix_reduced = self.get_sub_space(
-        np.arange(omix.n_features)[selector.support_])
-      model = selector
-    elif method in ('mrmr', ):
-      from mrmr import mrmr_classif
-      import pandas as pd
-      k = kwargs.get('k', 10)
-      selected_features = mrmr_classif(
-        X=pd.DataFrame(omix.features), y=pd.Series(omix.targets), K=k)
-      omix_reduced = self.get_sub_space(selected_features)
-      model = selected_features
-    elif method in ('pval', 'sig'):
-      indices = np.argsort(
-        [r[0][2] for r in self.single_factor_analysis_reports])
-      k = kwargs.get('k', 10)
-      selected_features = indices[:k]
-      omix_reduced = self.get_sub_space(selected_features)
-      model = selected_features
-    elif method in ('indices', ):
-      indices = kwargs.get('indices', None)
-      omix_reduced = self.get_sub_space(indices)
-      model = indices
-    else: raise KeyError(f'!! Unknown feature selecting method "{method}"')
-
-    if save_model: omix_reduced.put_into_pocket('sf_method', model, local=True)
+    if save_model: omix_reduced.put_into_pocket(
+      self.Keys.DimensionReducer, reducer, local=True)
 
     return omix_reduced
 
-  def get_sub_space(self, indices, start_from_1=True):
+  def get_sub_space(self, indices, start_from_1=True) -> 'Omix':
     """Get sub-space of features by indices.
     indices can be (1) e.g., '1,2,3', (2) e.g., '1-3', (3) e.g, [1, 2, 3]
     """
