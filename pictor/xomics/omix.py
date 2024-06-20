@@ -169,6 +169,16 @@ class Omix(Nomear):
       from pictor.xomics.ml.lasso import Lasso
       model = Lasso(kwargs.get('verbose', 0))
       omix_reduced = model.select_features(omix, **kwargs)
+    elif method in ('rfe', ):
+      from sklearn.feature_selection import RFE
+      from sklearn.svm import SVC
+      k = kwargs.get('k', 10)
+      estimator = SVC(kernel='linear')
+      selector = RFE(estimator, n_features_to_select=k, step=1)
+      selector = selector.fit(omix.features, omix.targets)
+      omix_reduced = self.get_sub_space(
+        np.arange(omix.n_features)[selector.support_])
+      model = selector
     elif method in ('mrmr', ):
       from mrmr import mrmr_classif
       import pandas as pd

@@ -332,12 +332,16 @@ class FeatureExplorer(Plotter):
       standardize=standardize, n_jobs=n_jobs, plot_path=plot_path,
       save_model=save_model, lasso_repeats=lasso_repeats, xmax=xmax)
 
-  def sf_mrmr(self, k=10, standardize=1):
+  def sf_mrmr(self, k: int=10, standardize: int=1):
     """Feature selection using mRMR.
 
     - Super Signature Test: Fail
     """
     self.select_features('mRMR', k=k, standardize=standardize)
+
+  def sf_rfe(self, k: int=10, standardize: int=1):
+    """Feature selection using recursive feature elimination."""
+    self.select_features('rfe', k=k, standardize=standardize)
 
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
@@ -503,6 +507,7 @@ class FeatureExplorer(Plotter):
     - sf_lasso: select features using Lasso regression
     - sf_pca: select features using PCA
     - sf_mrmr: select features using mRMR
+    - sf_rfe: select features using FRE
     """
     self.select_features('indices', indices=indices)
 
