@@ -63,6 +63,20 @@ class Pipeline(Nomear):
       dims.extend([omix.n_features for omix in omices])
     return int(np.median(dims))
 
+  @property
+  def pipeline_ranking(self):
+    """[..., AUC, DR_Model, ML_PKG), ...]"""
+    ranking = []
+    for _, omix_list in self.sub_space_dict.items():
+      for omix in omix_list:
+        assert isinstance(omix, Omix)
+        pkg_dict: OrderedDict = self.get_fit_packages(omix)
+        for _, pkg_list in pkg_dict.items():
+          for pkg in pkg_list:
+            ranking.append((pkg['AUC'], omix.dimension_reducer, pkg))
+
+    return sorted(ranking, key=lambda x: x[0], reverse=True)
+
   # endregion: Properties
 
   # region: Feature Selection

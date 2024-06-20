@@ -350,7 +350,7 @@ class FitPackage(Nomear):
       sig: Omix = omix.duplicate(
         features=self.probabilities[:, 1].reshape(-1, 1),
         feature_labels=['Signature'])
-      sig.show_in_explorer('Signature')
+      sig.show_in_explorer()
 
   @classmethod
   def pack(cls, predictions, probabilities, omix: Omix,
