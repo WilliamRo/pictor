@@ -62,7 +62,8 @@ class RadiomicFeatureExtractor(Nomear):
   # region: Public Method
 
   def extract_features_from_nii(self, image_path, mask_path, mask_labels=(1,),
-                                return_fmt='array&names', verbose=0):
+                                return_fmt='array&names', verbose=0,
+                                clip_range=(-1000, 1000)):
     import SimpleITK as sitk
 
     # Read SimpleITK mask
@@ -72,6 +73,10 @@ class RadiomicFeatureExtractor(Nomear):
     # Read image, and align with mask
     if verbose > 0: console.show_status('Reading image ...', prompt=self.prompt)
     img = sitk.ReadImage(image_path)
+
+    # Clip image if required
+    if clip_range is not None:
+      img = sitk.Clamp(img, clip_range[0], clip_range[1])
 
     img.SetOrigin(mask.GetOrigin())
     img.SetSpacing(mask.GetSpacing())
