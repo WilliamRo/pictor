@@ -76,7 +76,7 @@ class RadiomicFeatureExtractor(Nomear):
 
     # Clip image if required
     if clip_range is not None:
-      img = sitk.Clamp(img, clip_range[0], clip_range[1])
+      img = sitk.Clamp(img, lowerBound=clip_range[0], upperBound=clip_range[1])
 
     img.SetOrigin(mask.GetOrigin())
     img.SetSpacing(mask.GetSpacing())
