@@ -355,7 +355,7 @@ class Omix(Nomear):
     return omix
 
   def get_k_folds(self, k: int, shuffle=True, random_state=None,
-                  balance_classes=True, return_whole=False):
+                  balance_classes=True, return_whole=False, **kwargs):
     ratios = [1] * k
     omices = self.split(*ratios, balance_classes=balance_classes,
                         shuffle=shuffle, random_state=random_state,
@@ -367,6 +367,12 @@ class Omix(Nomear):
       train_omices.pop(i)
       om_train = Omix.sum(train_omices, data_name=f'Fold-{i + 1} Train')
       folds.append((om_train, om_test))
+
+    # Developer's note: This is for debugging
+    if 'sanity_check' in kwargs or True:
+      test_omix = Omix.sum([o for _, o in folds], data_name='Test-Omix')
+      assert all([sl1 == sl2 for sl1, sl2 in zip(
+        sorted(self.sample_labels), sorted(test_omix.sample_labels))])
 
     if return_whole:
       whole = Omix.sum([o for _, o in folds], data_name='Whole')
