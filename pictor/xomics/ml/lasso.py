@@ -91,7 +91,7 @@ class Lasso(MLEngine):
     # (1) Get settings
     random_state = kwargs.get('random_state', None)
     n_splits = kwargs.get('n_splits', 5)
-    n_repeats = kwargs.get('lasso_repeats', 1)
+    n_repeats = kwargs.get('lasso_repeats', 5)
     xmax = kwargs.get('xmax', None)
     if random_state is not None: n_repeats = 1
 
