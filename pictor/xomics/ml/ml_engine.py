@@ -58,6 +58,8 @@ class MLEngine(Nomear):
   # region: Hyperparameter Tuning
 
   def tune_hyperparameters(self, omix: Omix, **kwargs) -> dict:
+    """Tune hyperparameters using grid search or random search on omix
+    in a k-fold manner."""
     prompt = '[TUNE] >>'
     from sklearn.model_selection import KFold
 
@@ -72,6 +74,7 @@ class MLEngine(Nomear):
                                       self.DEFAULT_HP_MODEL_INIT_KWARGS)
 
     verbose = kwargs.get('verbose', self.verbose)
+    grid_repeats = kwargs.get('grid_repeats', 1)
 
     # (0.5) Construct hp_space
     if not isinstance(hp_space, list): hp_space = [hp_space]
@@ -102,19 +105,20 @@ class MLEngine(Nomear):
       if strategy in ('grid', 'grid_search'):
         from sklearn.model_selection import GridSearchCV
 
-        search_cv = GridSearchCV(model, hp_dict, verbose=verbose, cv=kf,
-                                 n_jobs=n_jobs)
+        search_cvs = [GridSearchCV(model, hp_dict, verbose=verbose, cv=kf,
+                                   n_jobs=n_jobs) for _ in range(grid_repeats)]
       elif strategy in ('rand', 'random', 'random_search'):
         from sklearn.model_selection import RandomizedSearchCV
 
         n_iter = kwargs.get('n_iter', 10)  # <= Number of iterations
-        search_cv = RandomizedSearchCV(
+        search_cvs = [RandomizedSearchCV(
           model, hp_dict, cv=kf, n_iter=n_iter, verbose=verbose,
-          n_jobs=n_jobs, random_state=random_state)
+          n_jobs=n_jobs, random_state=random_state)]
       else: raise ValueError(f'!! Unknown strategy: {strategy}')
 
-      search_cv.fit(omix.features, omix.targets)
-      searchers.append(search_cv)
+      for search_cv in search_cvs:
+        search_cv.fit(omix.features, omix.targets)
+        searchers.append(search_cv)
 
     # (3) Return the best hyperparameters
     searchers = sorted(searchers, key=lambda x: x.best_score_, reverse=True)
@@ -151,7 +155,7 @@ class MLEngine(Nomear):
 
     return model
 
-  def fit_k_fold(self, omix: Omix, **kwargs) -> 'FitPackage':
+  def fit_k_fold(self, omix: Omix, nested=True, **kwargs) -> 'FitPackage':
     prompt = '[K_FOLD_FIT] >>'
     # (0) Get settings
     random_state = kwargs.get('random_state', None)
@@ -162,33 +166,42 @@ class MLEngine(Nomear):
 
     verbose = kwargs.get('verbose', self.verbose)
 
+    nested_prefix = 'Nested ' if nested else ''
     if verbose > 0:
-      console.section(f'K-Fold fitting using {self}')
+      console.section(f'{nested_prefix}K-fold fitting using {self}')
 
-    # (1) Tune hyperparameters if required
-    if hp is None: hp = self.tune_hyperparameters(omix, verbose=verbose,
-                                                  random_state=random_state)
+    # (1) Tune hyperparameters if necessary
+    if hp is None and not nested: hp = self.tune_hyperparameters(
+      omix, verbose=verbose, random_state=random_state)
 
     # (2) Fit data in k-fold manner
-    if verbose > 0:
-      console.show_status(f'{n_splits}-fold fitting with seed = {random_state}',
-                          prompt=prompt)
+    if verbose > 0: console.show_status(
+      f'{nested_prefix}{n_splits}-fold fitting with seed = {random_state}',
+      prompt=prompt)
 
-    models, prob_list, pred_list = [], [], []
+    models, prob_list, pred_list, fold_pkgs = [], [], [], []
     k_fold_data, om_whole = omix.get_k_folds(
       k=n_splits, shuffle=shuffle, random_state=random_state, return_whole=True)
 
     for i, (om_train, om_test) in enumerate(k_fold_data):
       if verbose > 3: om_test.report()
 
+      # Tune parameters on om_train if necessary
+      if hp is None and nested: hp = self.tune_hyperparameters(
+        om_train, verbose=verbose, random_state=random_state)
+
+      # Fit the model
       model = self.fit(om_train, hp=hp, random_state=random_state)
 
+      # Pack the results
       prob = model.predict_proba(om_test.features)
       pred = model.predict(om_test.features)
 
       prob_list.append(prob)
       pred_list.append(pred)
       models.append(model)
+
+      fold_pkgs.append(FitPackage.pack(pred, prob, om_test, hp=hp))
 
     # probabilities.shape = (n_samples, n_classes)
     probabilities = np.concatenate(prob_list, axis=0)
@@ -199,7 +212,8 @@ class MLEngine(Nomear):
 
     # (3) Analyze results if required
     if not kwargs.get('save_models', False): models = ()
-    package = FitPackage.pack(predictions, probabilities, om_whole, models, hp)
+    package = FitPackage.pack(predictions, probabilities, om_whole, models, hp,
+                              sub_packages=fold_pkgs)
     package.report(print_cm=kwargs.get('print_cm', False),
                    print_cm_table=kwargs.get('cm', False),
                    plot_cm=kwargs.get('plot_cm', False),
@@ -272,12 +286,14 @@ class FitPackage(Nomear):
   def __init__(self, hyper_parameters: dict,
                confusion_matrix: ConfusionMatrix,
                models: list, roc: ROC,
-               probabilities: np.ndarray):
+               probabilities: np.ndarray,
+               sub_packages=None):
     self.hyper_parameters = hyper_parameters
     self.confusion_matrix: ConfusionMatrix = confusion_matrix
     self.models = models
     self.ROC = roc
     self.probabilities = probabilities
+    self.sub_packages = sub_packages
 
   # region: Properties
 
@@ -354,7 +370,7 @@ class FitPackage(Nomear):
 
   @classmethod
   def pack(cls, predictions, probabilities, omix: Omix,
-           models=(), hp={}) -> 'FitPackage':
+           models=(), hp={}, sub_packages=()) -> 'FitPackage':
     """Construct a FitPackage from an Omix object."""
     cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
     cm.fill(predictions, omix.targets)
@@ -362,7 +378,8 @@ class FitPackage(Nomear):
     roc = ROC(probabilities[:, 1], omix.targets)
 
     package = FitPackage(hyper_parameters=hp, models=models, roc=roc,
-                         confusion_matrix=cm, probabilities=probabilities)
+                         confusion_matrix=cm, probabilities=probabilities,
+                         sub_packages=sub_packages)
     return package
 
   # endregion: Public Methods

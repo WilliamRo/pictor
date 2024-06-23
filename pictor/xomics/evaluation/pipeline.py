@@ -114,7 +114,7 @@ class Pipeline(Nomear):
 
   # region: Fitting
 
-  def fit_traverse_spaces(self, model: str, repeats=1,
+  def fit_traverse_spaces(self, model: str, repeats=1, nested=True,
                           show_progress=0, **kwargs):
     from pictor.xomics.ml import get_model_class
     from pictor.xomics.ml.ml_engine import MLEngine
@@ -130,8 +130,9 @@ class Pipeline(Nomear):
     # (2) Traverse
     sub_spaces = self.sub_spaces
     N = len(sub_spaces)
+    nested_suffix = ', nested' if nested else ''
     if show_progress: console.show_status(
-      f'Traverse through {N} subspaces (repeat={repeats}) using {model} ...',
+      f'Traverse through {N} subspaces (repeat={repeats}{nested_suffix}) using {model} ...',
       prompt=prompt)
 
     for i, omix in enumerate(sub_spaces):
@@ -142,12 +143,13 @@ class Pipeline(Nomear):
       if model_name not in pkg_dict: pkg_dict[model_name] = []
 
       # (2.1) tune hyper-parameters
-      hp = model.tune_hyperparameters(omix, verbose=verbose)
+      if not nested: hp = model.tune_hyperparameters(omix, verbose=verbose)
+      else: hp = None
 
       # (2.2) Repeatedly fit model on omix
       for _ in range(repeats):
         pkg = model.fit_k_fold(omix, hp=hp, save_models=self.save_models,
-                               **kwargs)
+                               nested=nested, **kwargs)
         pkg_dict[model_name].append(pkg)
 
     if show_progress: console.show_status(

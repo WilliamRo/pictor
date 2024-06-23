@@ -364,9 +364,10 @@ class FeatureExplorer(Plotter):
 
   # region: Machine Learning
 
-  def ml(self, model, verbose: int = 1, warning: int = 1, print_cm: int = 0,
-         plot_roc: int = 0, plot_cm: int = 0, cm: int = 1, auc: int = 1,
-         mi: int = 0, seed: int = None, sig: int = 0, lc: int = 0):
+  def ml(self, model, nested: int = 1, verbose: int = 1, warning: int = 1,
+         print_cm: int = 0, plot_roc: int = 0, plot_cm: int = 0, cm: int = 1,
+         auc: int = 1, mi: int = 0, seed: int = None, sig: int = 0,
+         lc: int = 0):
     """Below are the machine learning methods you can use in FeatureExplorer
 
     Args:
@@ -377,6 +378,8 @@ class FeatureExplorer(Plotter):
         - rf: Random Forest Classifier
         - xgb: XGBoost Classifier
 
+      nested: int, 1: option to use nested cross validation. Otherwise,
+                      hyper-parameters are optimized based on whole dataset
       verbose: int, 0: show fitting status, 1: show fitting details
       cm: int, 1: show confusion matrix
       print_cm: int, 1: print confusion matrix
@@ -398,9 +401,10 @@ class FeatureExplorer(Plotter):
       model.plot_learning_curve(self.omix, verbose=verbose)
       return
 
-    model.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
-                     auc=auc, plot_roc=plot_roc, plot_cm=plot_cm, mi=mi,
-                     random_state=seed, show_signature=sig == 1)
+    model.fit_k_fold(self.omix, nested=nested, verbose=verbose, cm=cm,
+                     print_cm=print_cm, auc=auc, plot_roc=plot_roc,
+                     plot_cm=plot_cm, mi=mi, random_state=seed,
+                     show_signature=sig == 1)
 
   # endregion: Machine Learning
 
