@@ -13,6 +13,8 @@
 # limitations under the License.
 # ====-====================================================================-====
 from collections import OrderedDict
+from pictor.xomics.ml.dr.dr_engine import DREngine
+from pictor.xomics.ml.ml_engine import FitPackage
 from pictor.xomics.omix import Omix
 from pictor.xomics.stat_analyzers import calc_CI
 from roma import console
@@ -293,3 +295,23 @@ class Pipeline(Nomear):
     return omix
 
   # endregion: Pipeline Methods
+
+  # region: Evaluation
+
+  def evaluate_best_pipeline(self, omix: Omix, rank=1, verbose=1):
+    ranking = self.pipeline_ranking
+
+    if verbose:
+      MAX_RANK = 10
+      rank_str = ', '.join([f'[{i+1}{"*" if i + 1 == rank else ""}] {r[0]:.3f}'
+                            for i, r in enumerate(ranking[:MAX_RANK])])
+      console.show_info(f'AUC ranking: {rank_str}')
+
+    selected_dr: DREngine = ranking[rank - 1][1]
+    selected_pkg: FitPackage = ranking[rank - 1][2]
+
+    omix_reduced = selected_dr.reduce_dimension(omix)
+    pkg = selected_pkg.evaluate(omix_reduced)
+    return pkg
+
+  # endregion: Evaluation
