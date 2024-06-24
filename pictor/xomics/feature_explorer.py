@@ -240,7 +240,7 @@ class FeatureExplorer(Plotter):
 
     # (3) Show scatter
     if not show_scatter: return
-    dot_color = 'darkorange'
+    dot_color = 'tab:blue'
     dot_alpha = 0.5
     for pos, data in zip(positions, groups):
       if not showfliers: data = remove_outliers(data)
