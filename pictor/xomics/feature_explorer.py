@@ -42,6 +42,9 @@ class FeatureExplorer(Plotter):
     self.new_settable_attr('statanno', True, bool, 'Statistical annotation')
     self.new_settable_attr('showfliers', False, bool, 'Option to show fliers')
     self.new_settable_attr('roc', False, bool, 'Option to show ROC curve')
+    self.new_settable_attr('show_scatter', False, bool,
+                           'Option to show scatter over boxplot')
+    self.new_settable_attr('sc', 1.0, float, 'Scatter compactness')
 
   # region: Properties
 
@@ -203,9 +206,11 @@ class FeatureExplorer(Plotter):
       ax.set_xticks([0, 1], self.target_labels)
       ax.set_xlim(-0.5, 1.5)
     else:
-      ax.boxplot(groups, showfliers=self.get('showfliers'),
-                 positions=range(len(groups)))
-      ax.set_xticklabels(self.target_labels)
+      self.box_plot_pro(ax, groups,
+                        showfliers=self.get('showfliers'),
+                        positions=range(len(groups)),
+                        labels=self.target_labels,
+                        show_scatter=self.get('show_scatter'))
 
     ax.set_title(title)
 
@@ -213,6 +218,35 @@ class FeatureExplorer(Plotter):
     if self.get('statanno') and all([len(g) > 1 for g in groups]):
       ann = Annotator(groups, ax)
       ann.annotate(**kwargs)
+
+  def box_plot_pro(self, ax: plt.axes, groups, showfliers, positions, labels,
+                   show_scatter=False):
+    from pictor.xomics.misc.distribution import get_x_position_over_boxplot
+    from pictor.xomics.misc.distribution import remove_outliers
+
+    """Box plot with scatter"""
+    # (0) Sanity check
+    bp_fliers = showfliers
+    if show_scatter: bp_fliers = False
+
+    # (1) Plot boxplot
+    bp = ax.boxplot(groups, showfliers=bp_fliers, positions=positions)
+    ax.set_xticklabels(labels)
+
+    # (2) Set box style
+    for i, (box, median) in enumerate(zip(bp['boxes'],  bp['medians'])):
+      # box.set(linewidth=2)
+      median.set(color='firebrick', linewidth=2)
+
+    # (3) Show scatter
+    if not show_scatter: return
+    dot_color = 'darkorange'
+    dot_alpha = 0.5
+    for pos, data in zip(positions, groups):
+      if not showfliers: data = remove_outliers(data)
+      dx = get_x_position_over_boxplot(data, c=self.get('sc'))
+      x = np.random.normal(pos + dx, 0.04, size=len(data))
+      ax.scatter(x, data, color=dot_color, alpha=dot_alpha)
 
   def plot_line_fit(self, ax: plt.Axes, x, y, x_label):
     """Plot line fit.
@@ -284,6 +318,8 @@ class FeatureExplorer(Plotter):
             'r-', label='Regression line')
 
     def limit(data, func, m=0.1, pct=None):
+      """Inner function to limit axis range,
+         note here x corresponds to feature"""
       if pct is not None:
         low, high = np.percentile(data, pct), np.percentile(data, 100 - pct)
       else: low, high = np.min(data), np.max(data)
@@ -485,6 +521,8 @@ class FeatureExplorer(Plotter):
       'f', lambda: self.flip('showfliers'), 'Toggle showfliers')
     self.register_a_shortcut(
       'r', lambda: self.flip('roc'), 'Toggle ROC')
+    self.register_a_shortcut(
+      's', lambda: self.flip('show_scatter'), 'Toggle show_scatter')
 
   def ls(self):
     """Below are misc methods you can use in FeatureExplorer
