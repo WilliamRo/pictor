@@ -17,6 +17,7 @@
 from .dr_engine import DREngine
 from pictor.xomics.ml.lasso import Lasso
 from pictor.xomics.omix import Omix
+from roma import console
 
 import numpy as np
 
@@ -57,4 +58,5 @@ class LASSO(Lasso, DREngine):
 
     # (3) Return reducer, and indices
     indices = np.where(importance > threshold)[0]
+    if verbose > 0: console.show_status(f'Selected {len(indices)} features.')
     return lasso, indices
