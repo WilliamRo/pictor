@@ -25,8 +25,8 @@ class Lasso(MLEngine):
   DEFAULT_HP_SPACE = {'alpha': np.logspace(-6, 1, 50)}
   DEFAULT_HP_MODEL_INIT_KWARGS = {'tol': 1e-2}
 
-  @property
-  def selected_indices(self): return self.get_from_pocket('selected_indices')
+  # @property
+  # def selected_indices(self): return self.get_from_pocket('selected_indices')
 
   def select_features(self, omix: Omix, **kwargs):
     # (0) get settings
@@ -56,7 +56,7 @@ class Lasso(MLEngine):
 
     # (3) Select features
     indices = np.where(importance > threshold)[0]
-    self.put_into_pocket('selected_indices', indices, local=True)
+    # self.put_into_pocket('selected_indices', indices, local=True)
     selected_features = omix.features[:, indices]
     labels = np.array(omix.feature_labels)[indices]
 
@@ -91,7 +91,7 @@ class Lasso(MLEngine):
     # (1) Get settings
     random_state = kwargs.get('random_state', None)
     n_splits = kwargs.get('n_splits', 5)
-    n_repeats = kwargs.get('lasso_repeats', 1)
+    n_repeats = kwargs.get('lasso_repeats', 5)
     xmax = kwargs.get('xmax', None)
     if random_state is not None: n_repeats = 1
 

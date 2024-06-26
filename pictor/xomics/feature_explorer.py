@@ -42,6 +42,9 @@ class FeatureExplorer(Plotter):
     self.new_settable_attr('statanno', True, bool, 'Statistical annotation')
     self.new_settable_attr('showfliers', False, bool, 'Option to show fliers')
     self.new_settable_attr('roc', False, bool, 'Option to show ROC curve')
+    self.new_settable_attr('show_scatter', False, bool,
+                           'Option to show scatter over boxplot')
+    self.new_settable_attr('sc', 1.0, float, 'Scatter compactness')
 
   # region: Properties
 
@@ -203,9 +206,11 @@ class FeatureExplorer(Plotter):
       ax.set_xticks([0, 1], self.target_labels)
       ax.set_xlim(-0.5, 1.5)
     else:
-      ax.boxplot(groups, showfliers=self.get('showfliers'),
-                 positions=range(len(groups)))
-      ax.set_xticklabels(self.target_labels)
+      self.box_plot_pro(ax, groups,
+                        showfliers=self.get('showfliers'),
+                        positions=range(len(groups)),
+                        labels=self.target_labels,
+                        show_scatter=self.get('show_scatter'))
 
     ax.set_title(title)
 
@@ -213,6 +218,35 @@ class FeatureExplorer(Plotter):
     if self.get('statanno') and all([len(g) > 1 for g in groups]):
       ann = Annotator(groups, ax)
       ann.annotate(**kwargs)
+
+  def box_plot_pro(self, ax: plt.axes, groups, showfliers, positions, labels,
+                   show_scatter=False):
+    from pictor.xomics.misc.distribution import get_x_position_over_boxplot
+    from pictor.xomics.misc.distribution import remove_outliers
+
+    """Box plot with scatter"""
+    # (0) Sanity check
+    bp_fliers = showfliers
+    if show_scatter: bp_fliers = False
+
+    # (1) Plot boxplot
+    bp = ax.boxplot(groups, showfliers=bp_fliers, positions=positions)
+    ax.set_xticklabels(labels)
+
+    # (2) Set box style
+    for i, (box, median) in enumerate(zip(bp['boxes'],  bp['medians'])):
+      # box.set(linewidth=2)
+      median.set(color='firebrick', linewidth=2)
+
+    # (3) Show scatter
+    if not show_scatter: return
+    dot_color = 'tab:blue'
+    dot_alpha = 0.5
+    for pos, data in zip(positions, groups):
+      if not showfliers: data = remove_outliers(data)
+      dx = get_x_position_over_boxplot(data, c=self.get('sc'))
+      x = np.random.normal(pos + dx, 0.04, size=len(data))
+      ax.scatter(x, data, color=dot_color, alpha=dot_alpha)
 
   def plot_line_fit(self, ax: plt.Axes, x, y, x_label):
     """Plot line fit.
@@ -284,6 +318,8 @@ class FeatureExplorer(Plotter):
             'r-', label='Regression line')
 
     def limit(data, func, m=0.1, pct=None):
+      """Inner function to limit axis range,
+         note here x corresponds to feature"""
       if pct is not None:
         low, high = np.percentile(data, pct), np.percentile(data, 100 - pct)
       else: low, high = np.min(data), np.max(data)
@@ -332,12 +368,16 @@ class FeatureExplorer(Plotter):
       standardize=standardize, n_jobs=n_jobs, plot_path=plot_path,
       save_model=save_model, lasso_repeats=lasso_repeats, xmax=xmax)
 
-  def sf_mrmr(self, k=10, standardize=1):
+  def sf_mrmr(self, k: int=10, standardize: int=1):
     """Feature selection using mRMR.
 
     - Super Signature Test: Fail
     """
     self.select_features('mRMR', k=k, standardize=standardize)
+
+  def sf_rfe(self, k: int=10, standardize: int=1):
+    """Feature selection using recursive feature elimination."""
+    self.select_features('rfe', k=k, standardize=standardize)
 
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
@@ -360,9 +400,10 @@ class FeatureExplorer(Plotter):
 
   # region: Machine Learning
 
-  def ml(self, model, verbose: int = 1, warning: int = 1, print_cm: int = 0,
-         plot_roc: int = 0, plot_cm: int = 0, cm: int = 1, auc: int = 1,
-         mi: int = 0, seed: int = None, sig: int = 0, lc: int = 0):
+  def ml(self, model, nested: int = 1, verbose: int = 1, warning: int = 1,
+         print_cm: int = 0, plot_roc: int = 0, plot_cm: int = 0, cm: int = 1,
+         auc: int = 1, mi: int = 0, seed: int = None, sig: int = 0,
+         lc: int = 0):
     """Below are the machine learning methods you can use in FeatureExplorer
 
     Args:
@@ -373,6 +414,8 @@ class FeatureExplorer(Plotter):
         - rf: Random Forest Classifier
         - xgb: XGBoost Classifier
 
+      nested: int, 1: option to use nested cross validation. Otherwise,
+                      hyper-parameters are optimized based on whole dataset
       verbose: int, 0: show fitting status, 1: show fitting details
       cm: int, 1: show confusion matrix
       print_cm: int, 1: print confusion matrix
@@ -394,9 +437,10 @@ class FeatureExplorer(Plotter):
       model.plot_learning_curve(self.omix, verbose=verbose)
       return
 
-    model.fit_k_fold(self.omix, verbose=verbose, cm=cm, print_cm=print_cm,
-                     auc=auc, plot_roc=plot_roc, plot_cm=plot_cm, mi=mi,
-                     random_state=seed, show_signature=sig == 1)
+    model.fit_k_fold(self.omix, nested=nested, verbose=verbose, cm=cm,
+                     print_cm=print_cm, auc=auc, plot_roc=plot_roc,
+                     plot_cm=plot_cm, mi=mi, random_state=seed,
+                     show_signature=sig == 1)
 
   # endregion: Machine Learning
 
@@ -477,6 +521,8 @@ class FeatureExplorer(Plotter):
       'f', lambda: self.flip('showfliers'), 'Toggle showfliers')
     self.register_a_shortcut(
       'r', lambda: self.flip('roc'), 'Toggle ROC')
+    self.register_a_shortcut(
+      's', lambda: self.flip('show_scatter'), 'Toggle show_scatter')
 
   def ls(self):
     """Below are misc methods you can use in FeatureExplorer
@@ -503,8 +549,9 @@ class FeatureExplorer(Plotter):
     - sf_lasso: select features using Lasso regression
     - sf_pca: select features using PCA
     - sf_mrmr: select features using mRMR
+    - sf_rfe: select features using FRE
     """
-    self.select_features('indices', indices=indices)
+    self.select_features('indices', indices=indices, start_from_1=True)
 
   # endregion: Commands
 

@@ -13,6 +13,8 @@
 # limitations under the License.
 # ====-====================================================================-====
 from collections import OrderedDict
+from pictor.xomics.ml.dr.dr_engine import DREngine
+from pictor.xomics.ml.ml_engine import FitPackage
 from pictor.xomics.omix import Omix
 from pictor.xomics.stat_analyzers import calc_CI
 from roma import console
@@ -63,6 +65,20 @@ class Pipeline(Nomear):
       dims.extend([omix.n_features for omix in omices])
     return int(np.median(dims))
 
+  @property
+  def pipeline_ranking(self):
+    """[..., AUC, DR_Model, ML_PKG), ...]"""
+    ranking = []
+    for _, omix_list in self.sub_space_dict.items():
+      for omix in omix_list:
+        assert isinstance(omix, Omix)
+        pkg_dict: OrderedDict = self.get_fit_packages(omix)
+        for _, pkg_list in pkg_dict.items():
+          for pkg in pkg_list:
+            ranking.append((pkg['AUC'], omix.dimension_reducer, pkg))
+
+    return sorted(ranking, key=lambda x: x[0], reverse=True)
+
   # endregion: Properties
 
   # region: Feature Selection
@@ -73,6 +89,7 @@ class Pipeline(Nomear):
     prompt = '[FEATURE SELECTION] >>'
 
     # if method == 'pca': assert repeats == 1, "Repeat PCA makes no sense."
+    if 'save_model' not in kwargs: kwargs['save_model'] = self.save_models
 
     # Initialize bag if not exists
     key = (method, tuple(sorted(tuple(kwargs.items()), key=lambda x: x[0])))
@@ -97,7 +114,7 @@ class Pipeline(Nomear):
 
   # region: Fitting
 
-  def fit_traverse_spaces(self, model: str, repeats=1,
+  def fit_traverse_spaces(self, model: str, repeats=1, nested=True,
                           show_progress=0, **kwargs):
     from pictor.xomics.ml import get_model_class
     from pictor.xomics.ml.ml_engine import MLEngine
@@ -113,8 +130,9 @@ class Pipeline(Nomear):
     # (2) Traverse
     sub_spaces = self.sub_spaces
     N = len(sub_spaces)
+    nested_suffix = ', nested' if nested else ''
     if show_progress: console.show_status(
-      f'Traverse through {N} subspaces (repeat={repeats}) using {model} ...',
+      f'Traverse through {N} subspaces (repeat={repeats}{nested_suffix}) using {model} ...',
       prompt=prompt)
 
     for i, omix in enumerate(sub_spaces):
@@ -125,12 +143,13 @@ class Pipeline(Nomear):
       if model_name not in pkg_dict: pkg_dict[model_name] = []
 
       # (2.1) tune hyper-parameters
-      hp = model.tune_hyperparameters(omix, verbose=verbose)
+      if not nested: hp = model.tune_hyperparameters(omix, verbose=verbose)
+      else: hp = None
 
       # (2.2) Repeatedly fit model on omix
       for _ in range(repeats):
         pkg = model.fit_k_fold(omix, hp=hp, save_models=self.save_models,
-                               **kwargs)
+                               nested=nested, **kwargs)
         pkg_dict[model_name].append(pkg)
 
     if show_progress: console.show_status(
@@ -278,3 +297,23 @@ class Pipeline(Nomear):
     return omix
 
   # endregion: Pipeline Methods
+
+  # region: Evaluation
+
+  def evaluate_best_pipeline(self, omix: Omix, rank=1, verbose=1):
+    ranking = self.pipeline_ranking
+
+    if verbose:
+      MAX_RANK = 10
+      rank_str = ', '.join([f'[{i+1}{"*" if i + 1 == rank else ""}] {r[0]:.3f}'
+                            for i, r in enumerate(ranking[:MAX_RANK])])
+      console.show_info(f'AUC ranking: {rank_str}')
+
+    selected_dr: DREngine = ranking[rank - 1][1]
+    selected_pkg: FitPackage = ranking[rank - 1][2]
+
+    omix_reduced = selected_dr.reduce_dimension(omix)
+    pkg = selected_pkg.evaluate(omix_reduced)
+    return pkg
+
+  # endregion: Evaluation

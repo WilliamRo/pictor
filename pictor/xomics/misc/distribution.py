@@ -45,6 +45,12 @@ def remove_outliers_for_list(*data_list, alpha=1.5):
 
 
 
+def get_x_position_over_boxplot(y: np.ndarray, c=1.0):
+  x = np.random.normal(0, 0.04, size=len(y))
+  return x
+
+
+
 if __name__ == '__main__':
   a = np.arange(10)
   b = remove_outliers(a)
