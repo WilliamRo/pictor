@@ -34,7 +34,7 @@ class Pictor(Easel, Database, Studio):
     TITLE_SUFFIX = 'TiTlE_sUfFiX'
     ALLOW_MAIN_THREAD_REFRESH = 'MaIn_ThReAd_ReFrEsH'
 
-  def __init__(self, title='Pictor', figure_size=(5, 5)):
+  def __init__(self, title='Pictor', figure_size=(5, 5), toolbar=False):
     # Call parent's constructor
     super(Pictor, self).__init__()
 
@@ -43,6 +43,10 @@ class Pictor(Easel, Database, Studio):
 
     # Register widgets
     self.canvas = Canvas(self, figure_size=figure_size)
+
+    if toolbar:
+      from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+      self.toolbar = NavigationToolbar2Tk(self.canvas._canvas, self)
 
     # Create dimensions for objects and layers
     self.create_dimension(self.Keys.OBJECTS)
@@ -206,9 +210,9 @@ class Pictor(Easel, Database, Studio):
   # region: Presets
 
   @staticmethod
-  def image_viewer(title='Image Viewer', figure_size=(5, 5)):
+  def image_viewer(title='Image Viewer', figure_size=(5, 5), **kwargs):
     from .plotters import Retina
-    p = Pictor(title=title, figure_size=figure_size)
+    p = Pictor(title=title, figure_size=figure_size, **kwargs)
     p.add_plotter(Retina())
     return p
 
