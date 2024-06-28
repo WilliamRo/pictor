@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-=====================================================================-====
+import numpy as np
+
 from pictor.xomics.omix import Omix
 from roma import Nomear
 
@@ -47,11 +49,19 @@ class DREngine(Nomear):
     return self.get_from_pocket(self.Keys.SelectedIndices,
                                 key_should_exist=True)
 
+  @property
+  def name(self): return self.__class__.__name__
+
   # endregion: Properties
 
   # region: Public Methods
 
   def reduce_dimension(self, omix: Omix, **kwargs) -> Omix:
+    # (-1) Sanity check
+    if isinstance(omix, np.ndarray):
+      assert len(omix.shape) == 2, 'Input must be 2D array.'
+      omix = Omix(omix, [999] * len(omix))
+
     # (0) Update configs
     configs = self.configs.copy()
     configs.update(kwargs)

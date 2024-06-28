@@ -53,6 +53,9 @@ class MLEngine(Nomear):
   def best_hp(self, val): self.put_into_pocket(
     'best_hp', val, exclusive=False, local=True)
 
+  @property
+  def name(self): return self.__class__.__name__
+
   # endregion: Properties
 
   # region: Hyperparameter Tuning
@@ -298,7 +301,7 @@ class FitPackage(Nomear):
   # region: Properties
 
   @property
-  def model_name(self): return self.models[0].__str__
+  def model_name(self): return self.models[0].name
 
   # endregion: Properties
 

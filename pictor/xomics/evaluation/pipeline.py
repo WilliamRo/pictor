@@ -70,12 +70,20 @@ class Pipeline(Nomear):
     """[..., AUC, DR_Model, ML_PKG), ...]"""
     ranking = []
     for _, omix_list in self.sub_space_dict.items():
+      # Gather dimension reducers, in case any omix is duplicated thus has no dr
+      # ... even save_model is True
+      reducers = [omix.dimension_reducer
+                 for omix in omix_list if omix.dimension_reducer is not None]
+      shared_reducer = reducers[0] if len(reducers) == 1 else None
+
       for omix in omix_list:
         assert isinstance(omix, Omix)
         pkg_dict: OrderedDict = self.get_fit_packages(omix)
         for _, pkg_list in pkg_dict.items():
           for pkg in pkg_list:
-            ranking.append((pkg['AUC'], omix.dimension_reducer, pkg))
+            reducer = omix.dimension_reducer
+            if reducer is None: reducer = shared_reducer
+            ranking.append((pkg['AUC'], reducer, pkg))
 
     return sorted(ranking, key=lambda x: x[0], reverse=True)
 
@@ -300,20 +308,40 @@ class Pipeline(Nomear):
 
   # region: Evaluation
 
-  def evaluate_best_pipeline(self, omix: Omix, rank=1, verbose=1):
+  def get_best_pipeline(self, rank=1, verbose=1, reducer=None, model=None):
     ranking = self.pipeline_ranking
+
+    if reducer not in (None, ''):
+      ranking = [r for r in ranking if r[1].name.lower() == reducer]
+      assert len(ranking) > 0
+
+    if model not in (None, ''):
+      ranking = [r for r in ranking if r[2].name.lower() == model]
+      assert len(ranking) > 0
+
+    selected_dr: DREngine = ranking[rank - 1][1]
+    selected_pkg: FitPackage = ranking[rank - 1][2]
 
     if verbose:
       MAX_RANK = 10
       rank_str = ', '.join([f'[{i+1}{"*" if i + 1 == rank else ""}] {r[0]:.3f}'
                             for i, r in enumerate(ranking[:MAX_RANK])])
       console.show_info(f'AUC ranking: {rank_str}')
+      self._report_dr_ml(selected_dr, selected_pkg)
 
-    selected_dr: DREngine = ranking[rank - 1][1]
-    selected_pkg: FitPackage = ranking[rank - 1][2]
+    return selected_dr, selected_pkg
 
-    omix_reduced = selected_dr.reduce_dimension(omix)
-    pkg = selected_pkg.evaluate(omix_reduced)
+  def evaluate_best_pipeline(self, omix: Omix, rank=1, verbose=1) -> FitPackage:
+    dr, pkg = self.get_best_pipeline(rank, verbose=verbose)
+
+    omix_reduced = dr.reduce_dimension(omix)
+    pkg = pkg.evaluate(omix_reduced)
     return pkg
+
+  def _report_dr_ml(self, dr, pkg):
+    console.show_info('Pipeline components:')
+    console.supplement(f'Dimension reducer: {dr.__class__.__name__}', level=2)
+    console.supplement(f'Machine learning model: {pkg.model_name}',
+                       level=2)
 
   # endregion: Evaluation

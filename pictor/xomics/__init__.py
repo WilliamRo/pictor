@@ -14,3 +14,10 @@
 # ======-=======================================================-===============
 from .feature_explorer import FeatureExplorer
 from .omix import Omix
+
+# Try accelerating
+try:
+  from sklearnex import patch_sklearn
+  patch_sklearn()
+except:
+  pass
