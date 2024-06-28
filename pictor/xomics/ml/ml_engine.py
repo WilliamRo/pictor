@@ -301,7 +301,7 @@ class FitPackage(Nomear):
   # region: Properties
 
   @property
-  def model_name(self): return self.models[0].name
+  def model_name(self): return self.models[0].__class__.__name__
 
   # endregion: Properties
 
