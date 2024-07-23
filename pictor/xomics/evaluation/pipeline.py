@@ -72,10 +72,10 @@ class Pipeline(Nomear):
     for _, omix_list in self.sub_space_dict.items():
       # Gather dimension reducers, in case any omix is duplicated thus has no dr
       # ... even save_model is True
-      reducers = [omix.dimension_reducer for omix in omix_list
-                 if isinstance(omix, Omix)
-                  and omix.dimension_reducer is not None]
-      shared_reducer = reducers[0] if len(reducers) == 1 else None
+      # reducers = [omix.dimension_reducer for omix in omix_list
+      #            if isinstance(omix, Omix)
+      #             and omix.dimension_reducer is not None]
+      # shared_reducer = reducers[0] if len(reducers) == 1 else None
 
       for omix in omix_list:
         nested_dr = isinstance(omix, tuple) and isinstance(omix[0], Omix)
@@ -89,7 +89,9 @@ class Pipeline(Nomear):
               reducer = pkg.reducers
             else: reducer = omix.dimension_reducer
 
-            if reducer is None: reducer = shared_reducer
+            # if reducer is None: reducer = shared_reducer
+            assert reducer is not None
+
             ranking.append((pkg['AUC'], reducer, pkg))
 
     return sorted(ranking, key=lambda x: x[0], reverse=True)
@@ -138,8 +140,9 @@ class Pipeline(Nomear):
         # PROTOCOL for nested dimension reduction
         omix_sub = (self.omix.duplicate(), method, kwargs)
       else:
-        if method == 'pca' and i > 0: omix_sub = omix_sub.duplicate()
-        else: omix_sub = self.omix.select_features(method, **kwargs)
+        shadow_omix = omix_sub if method == 'pca' and i > 0 else None
+        omix_sub = self.omix.select_features(method, shadow_omix=shadow_omix,
+                                             **kwargs)
 
       # (1.-1) Put sub-space-omix into sub_space_dict
       self.sub_space_dict[key].append(omix_sub)
@@ -212,13 +215,23 @@ class Pipeline(Nomear):
     return omix.get_from_pocket(
       'pp::fit_packages::24ma14', initializer=lambda: OrderedDict(), local=True)
 
-  def get_pkg_matrix(self, abbreviate=False):
+  def get_pkg_matrix(self, abbreviate=False, omix_refit=None, omix_test=None,
+                     random_seed=None, verbose=1):
+    """Get package matrix for each reducer-model combination.
+       - If omix_refit is provided, each combination will be refitted.
+       - If omix_test is provided, each combination will be validated on it.
+         Otherwise, previous evaluation results will be used to fill the matrix.
+
+       Note: If omix_refit or omix_test is provided, the result is not
+             deterministic.
+    """
     from pictor.xomics.ml import abbreviation_dict
 
     row_labels, col_labels, matrix_dict = [], [], {}
 
     # For each sub-space
     for key, omix_list in self.sub_space_dict.items():
+      # (1) Generate reducer key
       # key = ('sf_method_name', (('arg_1', arg_1_value), ...))
       sf_key = key[0]
 
@@ -231,23 +244,41 @@ class Pipeline(Nomear):
       # Register sf_key if not exists
       if sf_key not in row_labels: row_labels.append(sf_key)
 
+      # (2) Traverse through models
       for omix in omix_list:
         # {'model_name': [pkg_1, pkg_2, ...], ...}
         pkg_dict: OrderedDict = self.get_fit_packages(omix)
         for ml_key, pkg_list in pkg_dict.items():
+          # (2.1) Settle ml_key
           # `LogisticRegression` -> `LR`
           if abbreviate: ml_key = abbreviation_dict[ml_key]
 
           # Register ml_key if not exists
           if ml_key not in col_labels: col_labels.append(ml_key)
 
+          # (2.2) Initialize mat slot if not exists
           mat_key = (sf_key, ml_key)
           # Register mat_key if not exists
           if mat_key not in matrix_dict: matrix_dict[mat_key] = []
 
+          # (2.3) Fill in the matrix
+          # (2.3.1) Test pipeline on omix_test if provided
+          if isinstance(omix_test, Omix):
+            # TODO: duplicated with pipeline_ranking logic
+            pkg_list = [self.evaluate_pipeline(
+              omix_test, omix_refit=omix_refit, pkg=pkg,
+              reducer=(pkg.reducers if isinstance(omix, tuple)
+                       else omix.dimension_reducer),
+              random_seed=random_seed, verbose=verbose)
+              for pkg in pkg_list]
+
+          # (2.3.-1) Put package list into slot
           matrix_dict[mat_key].extend(pkg_list)
 
     return row_labels, col_labels, matrix_dict
+
+  def refit_pipeline(self, omix: Omix, random_seed=None):
+    pass
 
   def report(self, metrics=('AUC', 'F1')):
     console.section('Pipeline Report')
@@ -269,11 +300,14 @@ class Pipeline(Nomear):
 
     print('-' * 79)
 
-  def plot_matrix(self, fig_size=(5, 5)):
+  def plot_matrix(self, fig_size=(5, 5), omix_refit=None, omix_test=None,
+                  random_seed=None):
     metrics = ['AUC', 'Sensitivity', 'Selectivity',
                'Balanced Accuracy', 'Accuracy', 'F1']
 
-    row_labels, col_labels, matrix_dict = self.get_pkg_matrix(abbreviate=True)
+    row_labels, col_labels, matrix_dict = self.get_pkg_matrix(
+      abbreviate=True, omix_refit=omix_refit, omix_test=omix_test,
+      random_seed=random_seed)
 
     # Generate matrices
     matrices = OrderedDict()
@@ -350,15 +384,21 @@ class Pipeline(Nomear):
 
   def get_best_pipeline(self, rank=1, verbose=1, reducer=None, model=None):
     ranking = self.pipeline_ranking
+    nested_dr = isinstance(ranking[0][1], (tuple, list))
 
     if reducer not in (None, ''):
-      ranking = [r for r in ranking if r[1].name.lower() == reducer]
+      if nested_dr:
+        ranking = [r for r in ranking if r[1][0].name.lower() == reducer]
+      else:
+        ranking = [r for r in ranking if r[1].name.lower() == reducer]
       assert len(ranking) > 0
 
     if model not in (None, ''):
       ranking = [r for r in ranking if r[2].name.lower() == model]
       assert len(ranking) > 0
 
+    # Actually, when nested dimension reduction is used, selected_dr will be a
+    # list of dimension reducers
     selected_dr: DREngine = ranking[rank - 1][1]
     selected_pkg: FitPackage = ranking[rank - 1][2]
 
@@ -372,17 +412,34 @@ class Pipeline(Nomear):
 
     return selected_dr, selected_pkg
 
-  def evaluate_best_pipeline(self, omix: Omix, rank=1, verbose=1) -> FitPackage:
-    dr, pkg = self.get_best_pipeline(rank, verbose=verbose)
+  def evaluate_best_pipeline(self, omix: Omix, rank=1, verbose=1,
+                             model=None, reducer=None) -> FitPackage:
+    dr, pkg = self.get_best_pipeline(rank, verbose=verbose, reducer=reducer,
+                                     model=model)
 
-    if isinstance(dr, (tuple, list)): omix_reduced = omix
-    else: dr.reduce_dimension(omix)
+    return self.evaluate_pipeline(omix, pkg=pkg, reducer=dr, verbose=verbose)
 
-    pkg = pkg.evaluate(omix_reduced)
-    return pkg
+
+  def evaluate_pipeline(self, omix: Omix, omix_refit: Omix = None,
+                        pkg: FitPackage = None, reducer: DREngine = None,
+                        random_seed=None, verbose=1) -> FitPackage:
+    # Sanity check
+    if omix_refit is None:
+      assert isinstance(pkg, FitPackage), '!! Either omix_refit or pkg is required'
+
+    # TODO
+    assert omix_refit is None
+
+    if isinstance(reducer, (tuple, list)): omix_reduced = omix
+    else: omix_reduced = reducer.reduce_dimension(omix)
+
+    new_pkg = pkg.evaluate(omix_reduced)
+    return new_pkg
 
   def _report_dr_ml(self, dr, pkg):
     console.show_info('Pipeline components:')
+
+    if isinstance(dr, list): dr = dr[0]
     console.supplement(f'Dimension reducer: {dr.__class__.__name__}', level=2)
     console.supplement(f'Machine learning model: {pkg.model_name}',
                        level=2)
