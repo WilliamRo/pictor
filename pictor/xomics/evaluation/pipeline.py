@@ -328,8 +328,9 @@ class Pipeline(Nomear):
 
     row_labels = [rl.upper() for rl in row_labels]
 
+    cmap = 'Blues' if omix_test is None else 'Oranges'
     MatrixViewer.show_matrices(matrices, row_labels, col_labels, fig_size,
-                               values=value_dict)
+                               values=value_dict, cmap=cmap)
 
   def plot_calibration_curve(self, sf_method, *ml_methods, n_bins=10, **kwargs):
     from pictor.xomics.evaluation.calibration import Calibrator
