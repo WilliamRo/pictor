@@ -36,6 +36,8 @@ class DREngine(Nomear):
 
   def __init__(self, standardize: bool=True, **configs):
     self.standardize = standardize
+    self.mu = None
+    self.sigma = None
     self.configs = configs
 
   # region: Properties
@@ -67,7 +69,7 @@ class DREngine(Nomear):
     configs.update(kwargs)
 
     # (1) Standardize if required
-    if self.standardize: omix = omix.standardize()
+    if self.standardize: omix = omix.standardize(mu=self.mu, sigma=self.sigma)
 
     # (2) Return dimension-reduced Omix
     return self._reduce_dimension(omix, **configs)
@@ -78,7 +80,10 @@ class DREngine(Nomear):
     configs.update(kwargs)
 
     # (1) Standardize if required
-    if self.standardize: omix = omix.standardize()
+    if self.standardize:
+      omix, mu, sigma = omix.standardize(return_mu_sigma=True)
+      self.mu = mu
+      self.sigma = sigma
 
     # (2) Fit the reducer
     if self.TYPE == self.Types.Selector:

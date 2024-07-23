@@ -337,11 +337,16 @@ class Omix(Nomear):
     if kwargs.get('report_feature_sum', False):
       console.supplement(f'Feature sum = {np.sum(self.features)}')
 
-  def standardize(self, omix=None, update_self=False):
+  def standardize(self, omix=None, update_self=False, return_mu_sigma=False,
+                  mu=None, sigma=None):
     if omix is None: omix = self
     result = self if update_self else self.duplicate()
-    mu, sigma = omix.feature_mean, omix.feature_std
+
+    if mu is None and sigma is None:
+      mu, sigma = omix.feature_mean, omix.feature_std
+
     result.features = (omix.features - mu) / (sigma + 1e-6)
+    if return_mu_sigma: return result, mu, sigma
     return result
 
   def duplicate(self, **kwargs) -> 'Omix':
