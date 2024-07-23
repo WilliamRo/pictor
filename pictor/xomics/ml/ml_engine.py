@@ -158,7 +158,13 @@ class MLEngine(Nomear):
 
     return model
 
-  def fit_k_fold(self, omix: Omix, nested=True, **kwargs) -> 'FitPackage':
+  def fit_k_fold(self, omix: Omix, nested=False, **kwargs) -> 'FitPackage':
+    """Fit the model in a k-fold manner.
+
+    If omix is not an instance of Omix, it should be a tuple in a form of
+    (omix: Omix, method: str, kwargs: dict). In such cases, `nested` should
+    be True and feature reduction will be performed inside each inner CV.
+    """
     prompt = '[K_FOLD_FIT] >>'
     # (0) Get settings
     random_state = kwargs.get('random_state', None)
@@ -174,32 +180,68 @@ class MLEngine(Nomear):
       console.section(f'{nested_prefix}K-fold fitting using {self}')
 
     # (1) Tune hyperparameters if necessary
-    if hp is None and not nested: hp = self.tune_hyperparameters(
-      omix, verbose=verbose, random_state=random_state)
+    if hp is None and not nested:
+      if not isinstance(omix, Omix) and isinstance(omix, tuple):
+        raise AssertionError(r'!! nested dimension reduction should be used '
+                             r'with callable nested hp tuning')
+      hp = self.tune_hyperparameters(
+        omix, verbose=verbose, random_state=random_state)
 
     # (2) Fit data in k-fold manner
     if verbose > 0: console.show_status(
       f'{nested_prefix}{n_splits}-fold fitting with seed = {random_state}',
       prompt=prompt)
 
-    models, prob_list, pred_list, fold_pkgs = [], [], [], []
+    # (2.1) Preparation
+    models, prob_list, pred_list, fold_pkgs, reducers = [], [], [], [], []
+
+    # (2.1.1) Unpack omix if using nested dimension reduction
+    dr_key, dr_kwargs, nested_dr = None, None, False
+    if not isinstance(omix, Omix):
+      assert isinstance(omix, tuple) and len(omix) == 3
+      omix, dr_key, dr_kwargs = omix
+      nested_dr = True
+
+    # (2.1.2) Get k-fold data
     k_fold_data, om_whole = omix.get_k_folds(
       k=n_splits, shuffle=shuffle, random_state=random_state, return_whole=True)
 
+    # (2.2) Run outer loop of CV
     for i, (om_train, om_test) in enumerate(k_fold_data):
+      # (2.2.1) Report test data details if required
       if verbose > 3: om_test.report()
 
-      # Tune parameters on om_train if necessary
-      if hp is None and nested: hp = self.tune_hyperparameters(
+      # (2.2.2) Perform dimension reduction if specified
+      if nested_dr:
+        # (2.2.2.0) Report progress if required
+        if verbose > 0: console.show_status(
+          f'Reducing dimension for fold-{i+1}/{n_splits}...',)
+
+        # (2.2.2.1) Perform dimension reduction on om_train
+        om_train: Omix = om_train.select_features(
+          dr_key, verbose=verbose, save_model=True, **dr_kwargs)
+
+        # (2.2.2.2) Perform dimension reduction on om_test
+        reducer = om_train.dimension_reducer
+        om_test = reducer.reduce_dimension(om_test)
+
+        reducers.append(reducer)
+
+      # (2.2.3) Tune parameters on om_train if necessary
+      if nested:
+        if verbose > 0: console.show_status(
+          f'Tuning hyperparameters for fold-{i+1}/{n_splits}...',)
+        hp = self.tune_hyperparameters(
         om_train, verbose=verbose, random_state=random_state)
 
-      # Fit the model
+      # (2.2.4) Fit the model
       model = self.fit(om_train, hp=hp, random_state=random_state)
 
-      # Pack the results
+      # (2.2.5) Evaluate model on test data
       prob = model.predict_proba(om_test.features)
       pred = model.predict(om_test.features)
 
+      # (2.2.-1) Pack the results
       prob_list.append(prob)
       pred_list.append(pred)
       models.append(model)
@@ -216,7 +258,7 @@ class MLEngine(Nomear):
     # (3) Analyze results if required
     if not kwargs.get('save_models', False): models = ()
     package = FitPackage.pack(predictions, probabilities, om_whole, models, hp,
-                              sub_packages=fold_pkgs)
+                              sub_packages=fold_pkgs, reducers=reducers)
     package.report(print_cm=kwargs.get('print_cm', False),
                    print_cm_table=kwargs.get('cm', False),
                    plot_cm=kwargs.get('plot_cm', False),
@@ -290,6 +332,7 @@ class FitPackage(Nomear):
                confusion_matrix: ConfusionMatrix,
                models: list, roc: ROC,
                probabilities: np.ndarray,
+               reducers=(),
                sub_packages=None):
     self.hyper_parameters = hyper_parameters
     self.confusion_matrix: ConfusionMatrix = confusion_matrix
@@ -297,6 +340,8 @@ class FitPackage(Nomear):
     self.ROC = roc
     self.probabilities = probabilities
     self.sub_packages = sub_packages
+
+    self.reducers = reducers
 
   # region: Properties
 
@@ -319,6 +364,11 @@ class FitPackage(Nomear):
   # region: Public Methods
 
   def predict_proba(self, X):
+    if len(self.reducers) == len(self.models):
+      return np.mean(
+        [model.predict_proba(reducer.reduce_dimension(X))
+         for reducer, model in zip(self.reducers, self.models)], axis=0)
+
     return np.mean([model.predict_proba(X) for model in self.models], axis=0)
 
   def predict(self, X, threshold=0.5):
@@ -373,7 +423,7 @@ class FitPackage(Nomear):
 
   @classmethod
   def pack(cls, predictions, probabilities, omix: Omix,
-           models=(), hp={}, sub_packages=()) -> 'FitPackage':
+           models=(), hp={}, sub_packages=(), reducers=()) -> 'FitPackage':
     """Construct a FitPackage from an Omix object."""
     cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
     cm.fill(predictions, omix.targets)
@@ -382,7 +432,7 @@ class FitPackage(Nomear):
 
     package = FitPackage(hyper_parameters=hp, models=models, roc=roc,
                          confusion_matrix=cm, probabilities=probabilities,
-                         sub_packages=sub_packages)
+                         sub_packages=sub_packages, reducers=reducers)
     return package
 
   # endregion: Public Methods

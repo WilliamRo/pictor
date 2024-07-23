@@ -67,21 +67,28 @@ class Pipeline(Nomear):
 
   @property
   def pipeline_ranking(self):
-    """[..., AUC, DR_Model, ML_PKG), ...]"""
+    """[..., (AUC, DR_Model, ML_PKG), ...]"""
     ranking = []
     for _, omix_list in self.sub_space_dict.items():
       # Gather dimension reducers, in case any omix is duplicated thus has no dr
       # ... even save_model is True
-      reducers = [omix.dimension_reducer
-                 for omix in omix_list if omix.dimension_reducer is not None]
+      reducers = [omix.dimension_reducer for omix in omix_list
+                 if isinstance(omix, Omix)
+                  and omix.dimension_reducer is not None]
       shared_reducer = reducers[0] if len(reducers) == 1 else None
 
       for omix in omix_list:
-        assert isinstance(omix, Omix)
+        nested_dr = isinstance(omix, tuple) and isinstance(omix[0], Omix)
+        if not nested_dr: assert isinstance(omix, Omix)
+
         pkg_dict: OrderedDict = self.get_fit_packages(omix)
+
         for _, pkg_list in pkg_dict.items():
           for pkg in pkg_list:
-            reducer = omix.dimension_reducer
+            if nested_dr:
+              reducer = pkg.reducers
+            else: reducer = omix.dimension_reducer
+
             if reducer is None: reducer = shared_reducer
             ranking.append((pkg['AUC'], reducer, pkg))
 
@@ -91,30 +98,53 @@ class Pipeline(Nomear):
 
   # region: Feature Selection
 
-  def create_sub_space(self, method: str='*', repeats=1,
-                       show_progress=0, **kwargs):
+  def create_sub_space(self, method: str='*', repeats=1, nested=0,
+                       show_progress=1, **kwargs):
+    """Reduce dimension of self.omix and put the result into sub_space_dict.
+
+    Args:
+        method (str): Feature selection method. Defaults to '*'.
+        repeats (int): Number of repeats. Defaults to 1.
+        nested (bool): Whether to use nested cross-validation.
+           When set to True, dimension reduction process will be delayed
+           to the internal cross-validation stage. Defaults to False.
+        show_progress (bool): Whether to report progress. Defaults to 1.
+    """
+    # (0) Initialization
     method = method.lower()
     prompt = '[FEATURE SELECTION] >>'
 
-    # if method == 'pca': assert repeats == 1, "Repeat PCA makes no sense."
+    # (0.1) Set default settings
     if 'save_model' not in kwargs: kwargs['save_model'] = self.save_models
 
-    # Initialize bag if not exists
+    # (0.2) Initialize bag if not exists
     key = (method, tuple(sorted(tuple(kwargs.items()), key=lambda x: x[0])))
     if key not in self.sub_space_dict: self.sub_space_dict[key] = []
 
+    # (0.3) Show progress bar if required
     if show_progress: console.show_status(
       f'Creating sub-feature space using `{method}` ...', prompt=prompt)
 
+    # (1) Create sub-spaces for `repeat` times
     for i in range(repeats):
+      # (1.1) Show progress bar if required
       if show_progress: console.print_progress(i, repeats)
-      if method == '*': omix_sub = self.omix
+
+      if method == '*': omix_sub = self.omix.duplicate()
+      elif nested:
+        # When performing nested dimension reduction, save_model is
+        #  automatically set to True
+        kwargs.pop('save_model', None)
+        # PROTOCOL for nested dimension reduction
+        omix_sub = (self.omix.duplicate(), method, kwargs)
       else:
         if method == 'pca' and i > 0: omix_sub = omix_sub.duplicate()
         else: omix_sub = self.omix.select_features(method, **kwargs)
 
+      # (1.-1) Put sub-space-omix into sub_space_dict
       self.sub_space_dict[key].append(omix_sub)
 
+    # (-1) Report progress if required
     if show_progress: console.show_status(
       f'{repeats} sub-feature spaces created.', prompt=prompt)
 
@@ -140,18 +170,25 @@ class Pipeline(Nomear):
     N = len(sub_spaces)
     nested_suffix = ', nested' if nested else ''
     if show_progress: console.show_status(
-      f'Traverse through {N} subspaces (repeat={repeats}{nested_suffix}) using {model} ...',
+      f'Traverse through {N} subspaces '
+      f'(repeat={repeats}{nested_suffix}) using {model} ...',
       prompt=prompt)
 
     for i, omix in enumerate(sub_spaces):
       if show_progress: console.print_progress(i, N)
 
+      # (2.0) Get package dictionary
       pkg_dict = self.get_fit_packages(omix)
+
       model_name = str(model)
       if model_name not in pkg_dict: pkg_dict[model_name] = []
 
       # (2.1) tune hyper-parameters
-      if not nested: hp = model.tune_hyperparameters(omix, verbose=verbose)
+      if not nested:
+        if not isinstance(omix, Omix) and isinstance(omix, tuple):
+          raise AssertionError(r'!! nested dimension reduction should be used '
+                               r'with callable nested hp tuning')
+        hp = model.tune_hyperparameters(omix, verbose=verbose)
       else: hp = None
 
       # (2.2) Repeatedly fit model on omix
@@ -169,6 +206,9 @@ class Pipeline(Nomear):
 
   def get_fit_packages(self, omix: Omix) -> OrderedDict:
     """Format: {'model_name': [pkg_1, pkg_2, ...], ...}"""
+    if isinstance(omix, tuple):
+      assert len(omix) == 3
+      omix = omix[0]
     return omix.get_from_pocket(
       'pp::fit_packages::24ma14', initializer=lambda: OrderedDict(), local=True)
 
@@ -323,6 +363,7 @@ class Pipeline(Nomear):
     selected_pkg: FitPackage = ranking[rank - 1][2]
 
     if verbose:
+      # TODO: not work for nested dimension reduction
       MAX_RANK = 10
       rank_str = ', '.join([f'[{i+1}{"*" if i + 1 == rank else ""}] {r[0]:.3f}'
                             for i, r in enumerate(ranking[:MAX_RANK])])
@@ -334,7 +375,9 @@ class Pipeline(Nomear):
   def evaluate_best_pipeline(self, omix: Omix, rank=1, verbose=1) -> FitPackage:
     dr, pkg = self.get_best_pipeline(rank, verbose=verbose)
 
-    omix_reduced = dr.reduce_dimension(omix)
+    if isinstance(dr, (tuple, list)): omix_reduced = omix
+    else: dr.reduce_dimension(omix)
+
     pkg = pkg.evaluate(omix_reduced)
     return pkg
 

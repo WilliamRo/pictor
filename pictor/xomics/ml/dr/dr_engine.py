@@ -59,8 +59,10 @@ class DREngine(Nomear):
   # region: Public Methods
 
   def reduce_dimension(self, omix: Omix, **kwargs) -> Omix:
+    is_array = isinstance(omix, np.ndarray)
+
     # (-1) Sanity check
-    if isinstance(omix, np.ndarray):
+    if is_array:
       assert len(omix.shape) == 2, 'Input must be 2D array.'
       omix = Omix(omix, [999] * len(omix))
 
@@ -72,7 +74,9 @@ class DREngine(Nomear):
     if self.standardize: omix = omix.standardize(mu=self.mu, sigma=self.sigma)
 
     # (2) Return dimension-reduced Omix
-    return self._reduce_dimension(omix, **configs)
+    omix = self._reduce_dimension(omix, **configs)
+    if is_array: return omix.features
+    return omix
 
   def fit_reducer(self, omix: Omix, **kwargs):
     # (0) Update configs
