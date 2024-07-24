@@ -82,6 +82,7 @@ class DREngine(Nomear):
     # (0) Update configs
     configs = self.configs.copy()
     configs.update(kwargs)
+    exclusive = kwargs.get('exclusive', True)
 
     # (1) Standardize if required
     if self.standardize:
@@ -93,12 +94,14 @@ class DREngine(Nomear):
     if self.TYPE == self.Types.Selector:
       reducer, indices = self._fit_reducer(omix, **configs)
       assert indices is not None, 'Indices must be returned for selector.'
-      self.put_into_pocket(self.Keys.SelectedIndices, indices, local=True)
+      self.put_into_pocket(self.Keys.SelectedIndices, indices, local=True,
+                           exclusive=exclusive)
     elif self.TYPE == self.Types.Transformer:
       reducer = self._fit_reducer(omix, **configs)
     else: raise TypeError(f'Invalid TYPE: {self.TYPE}')
 
-    self.put_into_pocket(self.Keys.Reducer, reducer, local=True)
+    self.put_into_pocket(self.Keys.Reducer, reducer, local=True,
+                         exclusive=exclusive)
 
   # endregion: Public Methods
 
@@ -116,5 +119,7 @@ class DREngine(Nomear):
     if self.TYPE == self.Types.Selector:
       return omix.get_sub_space(self.selected_indices, start_from_1=False)
     raise NotImplementedError
+
+  def __str__(self): return self.name
 
   # endregion: APIs

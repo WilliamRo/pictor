@@ -437,7 +437,7 @@ class FeatureExplorer(Plotter):
       model.plot_learning_curve(self.omix, verbose=verbose)
       return
 
-    model.fit_k_fold(self.omix, nested=nested, verbose=verbose, cm=cm,
+    model.fit_k_fold(self.omix, nested_ml=nested, verbose=verbose, cm=cm,
                      print_cm=print_cm, auc=auc, plot_roc=plot_roc,
                      plot_cm=plot_cm, mi=mi, random_state=seed,
                      show_signature=sig == 1)

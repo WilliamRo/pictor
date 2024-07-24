@@ -158,7 +158,7 @@ class MLEngine(Nomear):
 
     return model
 
-  def fit_k_fold(self, omix: Omix, nested=False, **kwargs) -> 'FitPackage':
+  def fit_k_fold(self, omix: Omix, nested_ml=False, **kwargs) -> 'FitPackage':
     """Fit the model in a k-fold manner.
 
     If omix is not an instance of Omix, it should be a tuple in a form of
@@ -175,12 +175,12 @@ class MLEngine(Nomear):
 
     verbose = kwargs.get('verbose', self.verbose)
 
-    nested_prefix = 'Nested ' if nested else ''
+    nested_prefix = 'Nested ' if nested_ml else ''
     if verbose > 0:
       console.section(f'{nested_prefix}K-fold fitting using {self}')
 
     # (1) Tune hyperparameters if necessary
-    if hp is None and not nested:
+    if hp is None and not nested_ml:
       if not isinstance(omix, Omix) and isinstance(omix, tuple):
         raise AssertionError(r'!! nested dimension reduction should be used '
                              r'with callable nested hp tuning')
@@ -228,11 +228,11 @@ class MLEngine(Nomear):
         reducers.append(reducer)
 
       # (2.2.3) Tune parameters on om_train if necessary
-      if nested:
+      if nested_ml:
         if verbose > 0: console.show_status(
           f'Tuning hyperparameters for fold-{i+1}/{n_splits}...',)
         hp = self.tune_hyperparameters(
-        om_train, verbose=verbose, random_state=random_state)
+          om_train, verbose=verbose, random_state=random_state)
 
       # (2.2.4) Fit the model
       model = self.fit(om_train, hp=hp, random_state=random_state)

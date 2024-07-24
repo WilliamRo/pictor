@@ -197,7 +197,7 @@ class Pipeline(Nomear):
       # (2.2) Repeatedly fit model on omix
       for _ in range(repeats):
         pkg = model.fit_k_fold(omix, hp=hp, save_models=self.save_models,
-                               nested=nested, **kwargs)
+                               nested_ml=nested, **kwargs)
         pkg_dict[model_name].append(pkg)
 
     if show_progress: console.show_status(
@@ -216,7 +216,7 @@ class Pipeline(Nomear):
       'pp::fit_packages::24ma14', initializer=lambda: OrderedDict(), local=True)
 
   def get_pkg_matrix(self, abbreviate=False, omix_refit=None, omix_test=None,
-                     random_seed=None, verbose=1):
+                     random_state=None, verbose=1):
     """Get package matrix for each reducer-model combination.
        - If omix_refit is provided, each combination will be refitted.
        - If omix_test is provided, each combination will be validated on it.
@@ -269,7 +269,7 @@ class Pipeline(Nomear):
               omix_test, omix_refit=omix_refit, pkg=pkg,
               reducer=(pkg.reducers if isinstance(omix, tuple)
                        else omix.dimension_reducer),
-              random_seed=random_seed, verbose=verbose)
+              random_seed=random_state, verbose=verbose)
               for pkg in pkg_list]
 
           # (2.3.-1) Put package list into slot
@@ -301,13 +301,13 @@ class Pipeline(Nomear):
     print('-' * 79)
 
   def plot_matrix(self, fig_size=(5, 5), omix_refit=None, omix_test=None,
-                  random_seed=None):
+                  random_state=None, verbose=0):
     metrics = ['AUC', 'Sensitivity', 'Selectivity',
                'Balanced Accuracy', 'Accuracy', 'F1']
 
     row_labels, col_labels, matrix_dict = self.get_pkg_matrix(
       abbreviate=True, omix_refit=omix_refit, omix_test=omix_test,
-      random_seed=random_seed)
+      random_state=random_state, verbose=verbose)
 
     # Generate matrices
     matrices = OrderedDict()
@@ -352,33 +352,6 @@ class Pipeline(Nomear):
 
   # region: Pipeline Methods
 
-  @staticmethod
-  def grid_search(omix, sf_methods=('lasso', 'sig'),
-                  ml_methods=('lr', 'svm', 'dt', 'rf', 'xgb'),
-                  k=None, sf_repeats=10, ml_repeats=10, config_str='',
-                  ignore_warnings=1, **kwargs):  # TODO --------------------
-    """Grid search for feature selection methods and machine learning methods.
-    """
-    pi = Pipeline(omix, ignore_warnings=ignore_warnings, save_models=0)
-
-    # (1) Load pre-defined settings
-    if sf_methods == '':
-      pass
-
-    if ml_methods == '':
-      pass
-
-    # (1.1) Sanity check
-    if isinstance(sf_methods, str): sf_methods = [sf_methods]
-    if isinstance(ml_methods, str): ml_methods = [ml_methods]
-
-    # (2) Create subspaces
-
-    # (-1) Report
-    pi.report()
-
-    return omix
-
   # endregion: Pipeline Methods
 
   # region: Evaluation
@@ -404,7 +377,6 @@ class Pipeline(Nomear):
     selected_pkg: FitPackage = ranking[rank - 1][2]
 
     if verbose:
-      # TODO: not work for nested dimension reduction
       MAX_RANK = 10
       rank_str = ', '.join([f'[{i+1}{"*" if i + 1 == rank else ""}] {r[0]:.3f}'
                             for i, r in enumerate(ranking[:MAX_RANK])])
@@ -413,29 +385,60 @@ class Pipeline(Nomear):
 
     return selected_dr, selected_pkg
 
-  def evaluate_best_pipeline(self, omix: Omix, rank=1, verbose=1,
-                             model=None, reducer=None) -> FitPackage:
+  def evaluate_best_pipeline(self, omix: Omix, omix_refit: Omix = None, rank=1,
+                             verbose=1, model=None, reducer=None) -> FitPackage:
     dr, pkg = self.get_best_pipeline(rank, verbose=verbose, reducer=reducer,
                                      model=model)
 
-    return self.evaluate_pipeline(omix, pkg=pkg, reducer=dr, verbose=verbose)
+    return self.evaluate_pipeline(omix, omix_refit=omix_refit,
+                                  pkg=pkg, reducer=dr, verbose=verbose)
 
 
   def evaluate_pipeline(self, omix: Omix, omix_refit: Omix = None,
                         pkg: FitPackage = None, reducer: DREngine = None,
                         random_seed=None, verbose=1) -> FitPackage:
-    # Sanity check
+    # (0) Sanity check
     if omix_refit is None:
       assert isinstance(pkg, FitPackage), '!! Either omix_refit or pkg is required'
 
-    # TODO
-    assert omix_refit is None
+    # (A) Non-refit
+    if omix_refit is None:
+      # (A-1) Reduce dimension if valid reducer is provided
+      #  Otherwise dimension reduction will be performed
+      #  before each model is called
+      if isinstance(reducer, (tuple, list)): omix_reduced = omix
+      else: omix_reduced = reducer.reduce_dimension(omix)
 
-    if isinstance(reducer, (tuple, list)): omix_reduced = omix
-    else: omix_reduced = reducer.reduce_dimension(omix)
+      new_pkg = pkg.evaluate(omix_reduced)
+      return new_pkg
 
-    new_pkg = pkg.evaluate(omix_reduced)
-    return new_pkg
+    # (B) Refit TODO: see ml_engine.fit_k_fold
+    from pictor.xomics.ml import SK_TO_OMIX_DICT
+
+    if isinstance(reducer, (tuple, list)): reducer = reducer[0]
+    ModelClass = SK_TO_OMIX_DICT[pkg.models[0].__class__]
+
+    if verbose:
+      model_name = ModelClass.__name__
+      console.show_status(f'Refitting {reducer}->{model_name} pipeline ...')
+
+    # (B-1) Fit reducer and reduce dimension
+    reducer.fit_reducer(omix_refit, random_state=random_seed, exclusive=False,
+                        verbose=verbose)
+    omix_refit_reduced = reducer.reduce_dimension(omix_refit)
+
+    # (B-2) Fit machine learning model
+    model = ModelClass()
+    hp = model.tune_hyperparameters(
+      omix_refit_reduced, verbose=verbose, random_state=random_seed)
+    sk_model = model.fit(omix_refit_reduced, hp=hp, random_state=random_seed)
+
+    # (B-3) Test model on test data
+    omix_reduced = reducer.reduce_dimension(omix)
+    prob = sk_model.predict_proba(omix_reduced.features)
+    pred = sk_model.predict(omix_reduced.features)
+
+    return FitPackage.pack(pred, prob, omix, hp=hp)
 
   def _report_dr_ml(self, dr, pkg):
     console.show_info('Pipeline components:')
