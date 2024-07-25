@@ -23,9 +23,11 @@ class Indices(DREngine):
   TYPE = DREngine.Types.Selector
 
 
-  def _fit_reducer(self, omix: Omix, indices, start_from_1=False, **kwargs):
+  def _fit_reducer(self, omix: Omix, indices='*', start_from_1=False, **kwargs):
     if isinstance(indices, str):
-      if '-' in indices:
+      if indices == '*':
+        indices = list(range(omix.n_features))
+      elif '-' in indices:
         start, end = map(int, indices.split('-'))
         indices = list(range(start, end + 1))
       elif ',' in indices:

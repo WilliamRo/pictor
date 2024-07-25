@@ -132,8 +132,7 @@ class Pipeline(Nomear):
       # (1.1) Show progress bar if required
       if show_progress: console.print_progress(i, repeats)
 
-      if method == '*': omix_sub = self.omix.duplicate()
-      elif nested:
+      if nested:
         # When performing nested dimension reduction, save_model is
         #  automatically set to True
         kwargs.pop('save_model', None)

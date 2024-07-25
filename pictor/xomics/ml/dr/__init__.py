@@ -29,6 +29,7 @@ def get_reducer_class(key):
     'pca': PCA,
     'lasso': LASSO,
     'indices': Indices,
+    '*': Indices,
     'mrmr': MRMR,
     'rfe': RFE,
     'sig': PVAL,
