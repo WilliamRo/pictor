@@ -30,8 +30,9 @@ MODEL_CLASS_DICT = {
   'svm': SupportVectorMachine,
   'dt': DecisionTree,
   'rf': RandomForestClassifier,
-  'xgb': XGBClassifier,
+  # 'xgb': XGBClassifier,
 }
+if XGBClassifier is not None: MODEL_CLASS_DICT['xgb'] = XGBClassifier
 
 SK_TO_OMIX_DICT = {model_class.SK_CLASS: model_class
                    for _, model_class in MODEL_CLASS_DICT.items()}
