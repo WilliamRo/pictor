@@ -146,9 +146,11 @@ class Plotter(Nomear):
     # Refresh canvas
     if auto_refresh: self.refresh()
 
-  def get(self, key):
+  def get(self, key, default=None):
     self._check_attribute(key)
-    return self.settable_attributes[key][0]
+    value = self.settable_attributes[key][0]
+    if value is None: return default
+    return value
 
   def flip(self, key):
     """Flip a boolean value"""

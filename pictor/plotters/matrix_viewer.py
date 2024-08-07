@@ -44,6 +44,8 @@ class MatrixViewer(Plotter):
     self.new_settable_attr('ci', False, bool, 'Option to show CI95')
     self.new_settable_attr('fontsize', 8, int, 'Font size')
 
+    self.new_settable_attr('hide_zero', True, bool, 'Option to hide zeros')
+
 
   def matshow(self, ax: plt.Axes, x: str, fig: plt.Figure):
     matrix = self.matrices[x]
@@ -53,6 +55,9 @@ class MatrixViewer(Plotter):
     d = self.get('digit')
     for i in range(matrix.shape[0]):
       for j in range(matrix.shape[1]):
+        # Hide zeros if required
+        if self.get('hide_zero') and matrix[i, j] == 0: continue
+
         # Choose font color
         color = '#000'
         if self.get('auto_fcolor'):
