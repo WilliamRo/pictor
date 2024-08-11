@@ -379,6 +379,10 @@ class FeatureExplorer(Plotter):
     """Feature selection using recursive feature elimination."""
     self.select_features('rfe', k=k, standardize=standardize)
 
+  def sf_pval(self, k: int=10, standardize: int=1):
+    """Feature selection using p-value sorting."""
+    self.select_features('pval', k=k, standardize=standardize)
+
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
     # key = (method, tuple(kwargs.items()))
@@ -444,7 +448,7 @@ class FeatureExplorer(Plotter):
 
   # endregion: Machine Learning
 
-  def report(self, report_feature_sum: int=0, report_stat: int=1):
+  def report(self, report_feature_sum: int=0, report_stat: int=0):
     self.omix.report(report_feature_sum=report_feature_sum,
                      report_stat=report_stat > 0)
 
@@ -550,6 +554,7 @@ class FeatureExplorer(Plotter):
     - sf_pca: select features using PCA
     - sf_mrmr: select features using mRMR
     - sf_rfe: select features using FRE
+    - sf_pval: select features using PVAL
     """
     self.select_features('indices', indices=indices, start_from_1=True)
 

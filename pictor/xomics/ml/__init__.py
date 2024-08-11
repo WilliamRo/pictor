@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ======-=======================================================-===============
+from pictor.xomics.ml.linear_regression import LinearRegression
 from pictor.xomics.ml.logistic_regression import LogisticRegression
 from pictor.xomics.ml.support_vector_machine import SupportVectorMachine
 from pictor.xomics.ml.decision_tree import DecisionTree
@@ -27,10 +28,13 @@ except:
 
 MODEL_CLASS_DICT = {
   'lr': LogisticRegression,
+  'lor': LogisticRegression,
   'svm': SupportVectorMachine,
   'dt': DecisionTree,
   'rf': RandomForestClassifier,
   # 'xgb': XGBClassifier,
+
+  'lir': LinearRegression,
 }
 if XGBClassifier is not None: MODEL_CLASS_DICT['xgb'] = XGBClassifier
 
@@ -41,7 +45,8 @@ def get_model_class(key): return MODEL_CLASS_DICT[key]
 
 
 abbreviation_dict = {
-  'LogisticRegression': 'LR',
+  'LinearRegression': 'LiR',
+  'LogisticRegression': 'LoR',
   'DecisionTree': 'DT',
   'SupportVectorMachine': 'SVM',
   'RandomForestClassifier': 'RF',

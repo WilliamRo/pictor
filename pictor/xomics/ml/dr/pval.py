@@ -30,8 +30,11 @@ class PVAL(DREngine):
     k = kwargs.get('k', self.Defaults.K)
 
     # (2) Create and fit reducer
-    indices = np.argsort(
-      [r[0][2] for r in omix.single_factor_analysis_reports])
+    if omix.targets_are_numerical:
+      indices = np.argsort([r.f_pvalue for r in omix.OLS_reports])
+    else:
+      indices = np.argsort(
+        [r[0][2] for r in omix.single_factor_analysis_reports])
 
     # (3) Return reducer, and indices
     return indices, indices[:k]

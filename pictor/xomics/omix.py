@@ -324,16 +324,21 @@ class Omix(Nomear):
     console.show_info(f'Details of `{self.data_name}`:')
     console.supplement(f'Features shape = {self.features.shape}')
     console.supplement(f'Target shape = {self.targets.shape}')
-    console.supplement(f'Groups:')
-    for i, group in enumerate(self.groups): console.supplement(
-      f'{self.target_labels[i]}: {len(group)} samples', level=2)
+
+    if not self.targets_are_numerical:
+      console.supplement(f'Groups:')
+      for i, group in enumerate(self.groups): console.supplement(
+        f'{self.target_labels[i]}: {len(group)} samples', level=2)
+    else:
+      min_target, max_target = min(self.targets), max(self.targets)
+      console.supplement(f'Target range: {min_target} - {max_target}')
 
     if len(self.target_collection) > 0:
       console.supplement(f'Target keys:')
       for key in self.target_collection.keys():
         console.supplement(f'{key}', level=2)
 
-    if kwargs.get('report_stat', True):
+    if kwargs.get('report_stat', False):
       mu_min, mu_max = min(self.feature_mean[0]), max(self.feature_mean[0])
       console.supplement(f'Feature mean in [{mu_min}, {mu_max}]')
 
@@ -369,6 +374,7 @@ class Omix(Nomear):
   def get_k_folds(self, k: int, shuffle=True, random_state=None,
                   balance_classes=True, return_whole=False, **kwargs):
     ratios = [1] * k
+    if self.targets_are_numerical: balance_classes = False
     omices = self.split(*ratios, balance_classes=balance_classes,
                         shuffle=shuffle, random_state=random_state,
                         data_labels=[f'Fold-{i + 1} Test' for i in range(k)])

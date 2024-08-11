@@ -29,6 +29,7 @@ import warnings
 class MLEngine(Nomear):
 
   SK_CLASS = None
+  IS_CLASSIFIER = True
   DEFAULT_HP_SPACE = None
   DEFAULT_HP_MODEL_INIT_KWARGS = {}
   EXTRA_FIT_KWARGS = {}
@@ -79,6 +80,8 @@ class MLEngine(Nomear):
     verbose = kwargs.get('verbose', self.verbose)
     grid_repeats = kwargs.get('grid_repeats', 1)
 
+    if len(hp_space) == 0: return {}
+
     # (0.5) Construct hp_space
     if not isinstance(hp_space, list): hp_space = [hp_space]
     # Sanity check
@@ -86,7 +89,9 @@ class MLEngine(Nomear):
       assert isinstance(hp_dict, dict), '!! hp_space should be a list of dict.'
 
     # (1) Initiate a model
-    model = self.SK_CLASS(random_state=random_state, **hp_model_init_kwargs)
+    if not omix.targets_are_numerical:
+      hp_model_init_kwargs['random_state'] = random_state
+    model = self.SK_CLASS(**hp_model_init_kwargs)
 
     # (2) Search for the best hyperparameters based on cross-validation
     if verbose > 0:
@@ -151,7 +156,8 @@ class MLEngine(Nomear):
     hp.update(self.EXTRA_FIT_KWARGS)
 
     # (1) Initiate model
-    model = self.SK_CLASS(random_state=random_state, **hp)
+    if not omix.targets_are_numerical: hp['random_state'] = random_state
+    model = self.SK_CLASS(**hp)
 
     # (2) Fit model
     model.fit(omix.features, omix.targets)
@@ -238,8 +244,11 @@ class MLEngine(Nomear):
       model = self.fit(om_train, hp=hp, random_state=random_state)
 
       # (2.2.5) Evaluate model on test data
-      prob = model.predict_proba(om_test.features)
       pred = model.predict(om_test.features)
+      if not omix.targets_are_numerical:
+        prob = model.predict_proba(om_test.features)
+      else:
+        prob = pred
 
       # (2.2.-1) Pack the results
       prob_list.append(prob)
@@ -333,13 +342,15 @@ class FitPackage(Nomear):
                models: list, roc: ROC,
                probabilities: np.ndarray,
                reducers=(),
-               sub_packages=None):
+               sub_packages=None,
+               model_is_regressor=False):
     self.hyper_parameters = hyper_parameters
     self.confusion_matrix: ConfusionMatrix = confusion_matrix
     self.models = models
     self.ROC = roc
     self.probabilities = probabilities
     self.sub_packages = sub_packages
+    self.model_is_regressor = model_is_regressor
 
     self.reducers = reducers
 
@@ -371,7 +382,20 @@ class FitPackage(Nomear):
 
     return np.mean([model.predict_proba(X) for model in self.models], axis=0)
 
+  def predict_values(self, X):
+    if len(self.reducers) == len(self.models):
+      return np.mean(
+        [model.predict(reducer.reduce_dimension(X))
+         for reducer, model in zip(self.reducers, self.models)], axis=0)
+
+    return np.mean([model.predict(X) for model in self.models], axis=0)
+
   def predict(self, X, threshold=0.5):
+    # For regressors
+    if self.model_is_regressor:
+      return self.predict_values(X)
+
+    # For classifiers
     proba = self.predict_proba(X)
     return (proba[:, 1] > threshold).astype(int)
 
@@ -389,6 +413,11 @@ class FitPackage(Nomear):
     :Args
     - mi_remap: callable, remap the misclassified indices
     """
+    if self.model_is_regressor:
+      mea = np.mean(np.abs(self.probabilities - omix.targets))
+      console.show_status(f'MAE = {mea:.3f}')
+      return
+
     # (1) Confusion matrix related
     cm = self.confusion_matrix
     if print_cm: self.print(cm.make_matrix_table())
@@ -425,14 +454,20 @@ class FitPackage(Nomear):
   def pack(cls, predictions, probabilities, omix: Omix,
            models=(), hp={}, sub_packages=(), reducers=()) -> 'FitPackage':
     """Construct a FitPackage from an Omix object."""
-    cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
-    cm.fill(predictions, omix.targets)
+    if omix.targets_are_numerical:
+      cm, roc = None, None
+      model_is_regressor = True
+    else:
+      cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
+      cm.fill(predictions, omix.targets)
 
-    roc = ROC(probabilities[:, 1], omix.targets)
+      roc = ROC(probabilities[:, 1], omix.targets)
+      model_is_regressor = False
 
     package = FitPackage(hyper_parameters=hp, models=models, roc=roc,
                          confusion_matrix=cm, probabilities=probabilities,
-                         sub_packages=sub_packages, reducers=reducers)
+                         sub_packages=sub_packages, reducers=reducers,
+                         model_is_regressor=model_is_regressor)
     return package
 
   # endregion: Public Methods
