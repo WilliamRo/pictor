@@ -81,8 +81,13 @@ def test_normality(x, method='auto', verbose=False, return_details=False,
   return test_result
 
 
-def calc_CI(values, alpha=0.95, vmin=None, vmax=None):
+def calc_CI(values, alpha=0.95, vmin=None, vmax=None, key=None):
   import scipy.stats as st
+
+  if key.lower() in ('auc', 'sensitivity', 'selectivity', 'f1',
+                     'balanced accuracy', 'accuracy'):
+    vmin, vmax = 0., 1.
+
   mu, sem = np.mean(values), st.sem(values)
   l, h = st.t.interval(alpha, len(values) - 1, loc=mu, scale=sem)
   if vmin is not None: l = max(l, vmin)

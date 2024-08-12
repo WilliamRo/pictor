@@ -69,7 +69,7 @@ class MatrixViewer(Plotter):
           mu = matrix[i, j]
           values = self.values[x][i][j]
           assert np.mean(values) == mu
-          l, h = calc_CI(values, alpha=0.95, vmin=0., vmax=1.)
+          l, h = calc_CI(values, alpha=0.95, key=x)
           text += f'\n [{l:.{d}f},{h:.{d}f}]'
         ax.text(j, i, text, ha='center', va='center',
                 fontsize=self.get('fontsize'), color=color)

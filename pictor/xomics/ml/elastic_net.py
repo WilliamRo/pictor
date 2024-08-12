@@ -11,15 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ====-====================================================================-====
+# =-===========================================================================-
 from pictor.xomics.ml.ml_engine import MLEngine
-from sklearn.linear_model import LinearRegression as SKLinearRegression
+from sklearn.linear_model import ElasticNet as SKElasticNet
+
+import numpy as np
 
 
 
-class LinearRegression(MLEngine):
+class ElasticNet(MLEngine):
 
-  SK_CLASS = SKLinearRegression
+  SK_CLASS = SKElasticNet
   IS_CLASSIFIER = False
 
-  DEFAULT_HP_SPACE = {}
+  DEFAULT_HP_SPACE = {
+    'alpha': np.logspace(-6, 1, 8),
+    'l1_ratio': np.linspace(0, 1, 5),
+  }

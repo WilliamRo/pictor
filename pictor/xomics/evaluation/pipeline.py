@@ -279,7 +279,11 @@ class Pipeline(Nomear):
   def refit_pipeline(self, omix: Omix, random_seed=None):
     pass
 
-  def report(self, metrics=('AUC', 'F1')):
+  def report(self, metrics=None):
+    if metrics is None:
+      if self.omix.targets_are_numerical: metrics = ('MAE',)
+      else: metrics = ('AUC', 'F1')
+
     console.section('Pipeline Report')
     row_labels, col_labels, matrix_dict = self.get_pkg_matrix()
     for sf_key in row_labels:
@@ -292,7 +296,8 @@ class Pipeline(Nomear):
         for key in metrics:
           values = [p[key] for p in pkg_list]
           mu = np.mean(values)
-          CI1, CI2 = calc_CI(values, alpha=0.95, vmin=0., vmax=1.)
+
+          CI1, CI2 = calc_CI(values, alpha=0.95, key=key)
           info = f'Avg({key}) over {n_pkg} trials: {mu:.3f}'
           info += f', CI95% = [{CI1:.3f}, {CI2:.3f}]'
           console.supplement(info, level=4)
@@ -301,8 +306,10 @@ class Pipeline(Nomear):
 
   def plot_matrix(self, fig_size=(5, 5), omix_refit=None, omix_test=None,
                   random_state=None, verbose=0):
-    metrics = ['AUC', 'Sensitivity', 'Selectivity',
-               'Balanced Accuracy', 'Accuracy', 'F1']
+
+    if self.omix.targets_are_numerical: metrics = ['MAE']
+    else: metrics = ['AUC', 'Sensitivity', 'Selectivity',
+                     'Balanced Accuracy', 'Accuracy', 'F1']
 
     row_labels, col_labels, matrix_dict = self.get_pkg_matrix(
       abbreviate=True, omix_refit=omix_refit, omix_test=omix_test,

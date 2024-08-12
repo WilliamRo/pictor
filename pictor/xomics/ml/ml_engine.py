@@ -343,6 +343,7 @@ class FitPackage(Nomear):
                probabilities: np.ndarray,
                reducers=(),
                sub_packages=None,
+               mae=None,
                model_is_regressor=False):
     self.hyper_parameters = hyper_parameters
     self.confusion_matrix: ConfusionMatrix = confusion_matrix
@@ -353,6 +354,9 @@ class FitPackage(Nomear):
     self.model_is_regressor = model_is_regressor
 
     self.reducers = reducers
+
+    # Regressor metrics
+    self.mae = mae
 
   # region: Properties
 
@@ -366,6 +370,11 @@ class FitPackage(Nomear):
   def __getitem__(self, item):
     if isinstance(item, str):
       item_l = item.lower()
+
+      # Metrics like MAE is recorded in constructor
+      if self.model_is_regressor:
+        return self.__getattribute__(item_l)
+
       if item_l in ('auc', 'roc_auc'): return self.ROC.auc
       else: return self.confusion_matrix[item]
     else: raise ValueError('!! item should be a string.')
@@ -407,6 +416,7 @@ class FitPackage(Nomear):
 
   def report(self, print_cm=True, print_cm_table=True, plot_cm=False,
              print_misclassified=False, print_auc=True, plot_roc=False,
+             mae=False,
              show_signature=False, mi_remap=None, omix=None, prompt='>> '):
     """Report the evaluation results of the fit package.
 
@@ -414,8 +424,7 @@ class FitPackage(Nomear):
     - mi_remap: callable, remap the misclassified indices
     """
     if self.model_is_regressor:
-      mea = np.mean(np.abs(self.probabilities - omix.targets))
-      console.show_status(f'MAE = {mea:.3f}')
+      if mae: console.show_status(f'MAE = {self.mae:.3f}')
       return
 
     # (1) Confusion matrix related
@@ -454,9 +463,13 @@ class FitPackage(Nomear):
   def pack(cls, predictions, probabilities, omix: Omix,
            models=(), hp={}, sub_packages=(), reducers=()) -> 'FitPackage':
     """Construct a FitPackage from an Omix object."""
+    cm, roc = None, None
+    mae = None
+
     if omix.targets_are_numerical:
-      cm, roc = None, None
       model_is_regressor = True
+
+      mae = np.mean(np.abs(probabilities - omix.targets))
     else:
       cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
       cm.fill(predictions, omix.targets)
@@ -467,7 +480,7 @@ class FitPackage(Nomear):
     package = FitPackage(hyper_parameters=hp, models=models, roc=roc,
                          confusion_matrix=cm, probabilities=probabilities,
                          sub_packages=sub_packages, reducers=reducers,
-                         model_is_regressor=model_is_regressor)
+                         model_is_regressor=model_is_regressor, mae=mae)
     return package
 
   # endregion: Public Methods
