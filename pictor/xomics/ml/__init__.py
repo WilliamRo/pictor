@@ -16,6 +16,7 @@ from pictor.xomics.ml.elastic_net import ElasticNet
 from pictor.xomics.ml.linear_regression import LinearRegression
 from pictor.xomics.ml.logistic_regression import LogisticRegression
 from pictor.xomics.ml.support_vector_machine import SupportVectorMachine
+from pictor.xomics.ml.support_vector_regressor import SupportVectorRegressor
 from pictor.xomics.ml.decision_tree import DecisionTree
 from pictor.xomics.ml.random_forest import RandomForestClassifier
 
@@ -31,19 +32,23 @@ MODEL_CLASS_DICT = {
   'lr': LogisticRegression,
   'lor': LogisticRegression,
   'svm': SupportVectorMachine,
+  'svc': SupportVectorMachine,
   'dt': DecisionTree,
   'rf': RandomForestClassifier,
   # 'xgb': XGBClassifier,
 
   'eln': ElasticNet,
   'lir': LinearRegression,
+  'svr': SupportVectorRegressor,
 }
 if XGBClassifier is not None: MODEL_CLASS_DICT['xgb'] = XGBClassifier
 
 SK_TO_OMIX_DICT = {model_class.SK_CLASS: model_class
                    for _, model_class in MODEL_CLASS_DICT.items()}
 
-def get_model_class(key): return MODEL_CLASS_DICT[key]
+def get_model_class(key):
+  if not isinstance(key, str): return key
+  return MODEL_CLASS_DICT[key]
 
 
 abbreviation_dict = {
@@ -52,6 +57,7 @@ abbreviation_dict = {
   'LogisticRegression': 'LoR',
   'DecisionTree': 'DT',
   'SupportVectorMachine': 'SVM',
+  'SupportVectorRegressor': 'SVR',
   'RandomForestClassifier': 'RF',
   'XGBClassifier': 'XGB',
 }

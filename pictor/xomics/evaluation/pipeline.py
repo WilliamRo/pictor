@@ -92,9 +92,11 @@ class Pipeline(Nomear):
             # if reducer is None: reducer = shared_reducer
             assert reducer is not None
 
-            ranking.append((pkg['AUC'], reducer, pkg))
+            key = 'MAE' if self.omix.targets_are_numerical else 'AUC'
+            ranking.append((pkg[key], reducer, pkg))
 
-    return sorted(ranking, key=lambda x: x[0], reverse=True)
+    larger_is_better = not self.omix.targets_are_numerical
+    return sorted(ranking, key=lambda x: x[0], reverse=larger_is_better)
 
   # endregion: Properties
 
@@ -250,7 +252,8 @@ class Pipeline(Nomear):
         for ml_key, pkg_list in pkg_dict.items():
           # (2.1) Settle ml_key
           # `LogisticRegression` -> `LR`
-          if abbreviate: ml_key = abbreviation_dict[ml_key]
+          if abbreviate and ml_key in abbreviation_dict:
+              ml_key = abbreviation_dict[ml_key]
 
           # Register ml_key if not exists
           if ml_key not in col_labels: col_labels.append(ml_key)

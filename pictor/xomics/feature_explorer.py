@@ -407,7 +407,7 @@ class FeatureExplorer(Plotter):
   def ml(self, model, nested: int = 1, verbose: int = 1, warning: int = 1,
          print_cm: int = 0, plot_roc: int = 0, plot_cm: int = 0, cm: int = 1,
          auc: int = 1, mi: int = 0, seed: int = None, sig: int = 0,
-         lc: int = 0):
+         lc: int = 0, ra: int = 0):
     """Below are the machine learning methods you can use in FeatureExplorer
 
     Args:
@@ -417,6 +417,9 @@ class FeatureExplorer(Plotter):
         - dt: Decision Tree Classifier
         - rf: Random Forest Classifier
         - xgb: XGBoost Classifier
+
+        - lir: Linear Regression
+        - eln: Elastic Net
 
       nested: int, 1: option to use nested cross validation. Otherwise,
                       hyper-parameters are optimized based on whole dataset
@@ -431,6 +434,7 @@ class FeatureExplorer(Plotter):
       seed: int, random seed
       sig: int, 0: option to show signature
       lc: int, 0: option to show learning curve
+      ra: int, 0: option to show regression analysis plot
     """
     from pictor.xomics.ml import get_model_class
 
@@ -443,8 +447,8 @@ class FeatureExplorer(Plotter):
 
     model.fit_k_fold(self.omix, nested_ml=nested, verbose=verbose, cm=cm,
                      print_cm=print_cm, auc=auc, plot_roc=plot_roc,
-                     plot_cm=plot_cm, mi=mi, random_state=seed,
-                     show_signature=sig == 1)
+                     plot_cm=plot_cm, mi=mi, random_state=seed, ra=ra,
+                     mae=1, show_signature=sig == 1)
 
   # endregion: Machine Learning
 

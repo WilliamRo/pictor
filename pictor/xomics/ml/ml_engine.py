@@ -34,6 +34,10 @@ class MLEngine(Nomear):
   DEFAULT_HP_MODEL_INIT_KWARGS = {}
   EXTRA_FIT_KWARGS = {}
 
+  DISABLE_PARALLEL = False
+
+  abbreviation = None
+
   def __init__(self, verbose: int = 0, ignore_warnings=False, n_jobs=5):
     # 0. Ignore warnings if required
     if ignore_warnings:
@@ -42,7 +46,7 @@ class MLEngine(Nomear):
       console.show_status('Warning Ignored.', prompt='[MLEngine] >>')
 
     self.verbose = verbose
-    self.n_jobs = n_jobs
+    self.n_jobs = 1 if self.DISABLE_PARALLEL else n_jobs
 
   # region: Properties
 
@@ -275,7 +279,8 @@ class MLEngine(Nomear):
                    print_auc=kwargs.get('auc', False),
                    plot_roc=kwargs.get('plot_roc', False),
                    show_signature=kwargs.get('show_signature', False),
-                   omix=om_whole,
+                   omix=om_whole, mae=kwargs.get('mae', False),
+                   ra=kwargs.get('ra', False),
                    mi_remap=lambda i: om_whole.sample_labels[i])
 
     # (-1) Return the fitted models and probabilities
@@ -329,7 +334,9 @@ class MLEngine(Nomear):
 
   # region: Overriding
 
-  def __str__(self): return str(self.__class__.__name__)
+  def __str__(self):
+    if self.abbreviation is not None: return self.abbreviation
+    return str(self.__class__.__name__)
 
   # endregion: Overriding
 
@@ -343,7 +350,7 @@ class FitPackage(Nomear):
                probabilities: np.ndarray,
                reducers=(),
                sub_packages=None,
-               mae=None,
+               targets=None, mae=None,
                model_is_regressor=False):
     self.hyper_parameters = hyper_parameters
     self.confusion_matrix: ConfusionMatrix = confusion_matrix
@@ -356,6 +363,7 @@ class FitPackage(Nomear):
     self.reducers = reducers
 
     # Regressor metrics
+    self.targets = targets
     self.mae = mae
 
   # region: Properties
@@ -416,7 +424,7 @@ class FitPackage(Nomear):
 
   def report(self, print_cm=True, print_cm_table=True, plot_cm=False,
              print_misclassified=False, print_auc=True, plot_roc=False,
-             mae=False,
+             mae=True, ra=False,
              show_signature=False, mi_remap=None, omix=None, prompt='>> '):
     """Report the evaluation results of the fit package.
 
@@ -425,6 +433,13 @@ class FitPackage(Nomear):
     """
     if self.model_is_regressor:
       if mae: console.show_status(f'MAE = {self.mae:.3f}')
+
+      if ra:
+        from pictor.xomics.evaluation.reg_ana import RegressionAnalysis
+        assert self.model_is_regressor, '!! This is not a regression model.'
+        ra = RegressionAnalysis(self.targets, self.probabilities)
+        ra.plot_scatter()
+
       return
 
     # (1) Confusion matrix related
@@ -480,7 +495,8 @@ class FitPackage(Nomear):
     package = FitPackage(hyper_parameters=hp, models=models, roc=roc,
                          confusion_matrix=cm, probabilities=probabilities,
                          sub_packages=sub_packages, reducers=reducers,
-                         model_is_regressor=model_is_regressor, mae=mae)
+                         model_is_regressor=model_is_regressor,
+                         targets=omix.targets, mae=mae)
     return package
 
   # endregion: Public Methods
