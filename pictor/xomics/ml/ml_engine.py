@@ -380,7 +380,9 @@ class FitPackage(Nomear):
       item_l = item.lower()
 
       # Metrics like MAE is recorded in constructor
-      if self.model_is_regressor:
+      # TODO: workaround for saved pkgs of old versions which has no
+      #   'model_is_regressor' attribute
+      if hasattr(self, 'model_is_regressor') and self.model_is_regressor:
         return self.__getattribute__(item_l)
 
       if item_l in ('auc', 'roc_auc'): return self.ROC.auc
