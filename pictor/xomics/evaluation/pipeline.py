@@ -444,7 +444,8 @@ class Pipeline(Nomear):
     prob = sk_model.predict_proba(omix_reduced.features)
     pred = sk_model.predict(omix_reduced.features)
 
-    return FitPackage.pack(pred, prob, omix, hp=hp)
+    return FitPackage.pack(pred, prob, omix, hp=hp,
+                           models=(sk_model,), reducers=(reducer,))
 
   def _report_dr_ml(self, dr, pkg):
     console.show_info('Pipeline components:')
