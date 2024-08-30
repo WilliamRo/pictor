@@ -425,7 +425,7 @@ class Pipeline(Nomear):
     from pictor.xomics.ml import SK_TO_OMIX_DICT
 
     if isinstance(reducer, (tuple, list)): reducer = reducer[0]
-    ModelClass = SK_TO_OMIX_DICT[pkg.models[0].__class__]
+    ModelClass = SK_TO_OMIX_DICT[pkg.models[0].__class__.__name__]
 
     if verbose:
       model_name = ModelClass.__name__

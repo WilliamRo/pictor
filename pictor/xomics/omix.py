@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===-==================================================================-=======
-import os
 from collections import OrderedDict
+from collections.abc import Iterable
+from numpy.lib.function_base import iterable
 from pictor.xomics.stat_analyzers import single_factor_analysis
 from roma import console
 from roma import io
@@ -21,6 +22,7 @@ from roma import Nomear
 from typing import List
 
 import numpy as np
+import os
 
 
 
@@ -445,6 +447,7 @@ class Omix(Nomear):
                        random_state=random_state) + [om2]
 
   def intersect_merge(self, other: 'Omix', data_name=None) -> 'Omix':
+    """Merge features of common samples in two Omices"""
     console.show_status(
       f'Merging `{self.data_name}` and `{other.data_name}` ...')
     console.section('Information of two Omices')
@@ -477,6 +480,24 @@ class Omix(Nomear):
     omix.report()
     return omix
 
+  def select_samples(self, indices: Iterable, data_name='Selected') -> 'Omix':
+    assert isinstance(indices, Iterable)
+
+    label_array = np.array(self.sample_labels)
+    features, targets, sample_labels = [], [], []
+    for i in indices:
+      if not isinstance(i, int):
+        assert i in self.sample_labels, f'!! {i} must be in sample_labels'
+        i = np.where(label_array == i)[0][0]
+
+      features.append(self.features[i])
+      targets.append(self.targets[i])
+      sample_labels.append(self.sample_labels[i])
+
+    features = np.stack(features, axis=0)
+    return self.duplicate(features=features, targets=targets,
+                          sample_labels=sample_labels, data_name=data_name)
+
   # endregion: Public Methods
 
   # region: Overriding
@@ -488,6 +509,7 @@ class Omix(Nomear):
     return om
 
   def __add__(self, other):
+    """Merge samples"""
     assert isinstance(other, Omix), '!! other must be an instance of Omix'
 
     data_name = f'{self.data_name} + {other.data_name}'

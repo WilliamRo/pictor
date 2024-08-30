@@ -43,7 +43,7 @@ MODEL_CLASS_DICT = {
 }
 if XGBClassifier is not None: MODEL_CLASS_DICT['xgb'] = XGBClassifier
 
-SK_TO_OMIX_DICT = {model_class.SK_CLASS: model_class
+SK_TO_OMIX_DICT = {model_class.SK_CLASS.__name__: model_class
                    for _, model_class in MODEL_CLASS_DICT.items()}
 
 def get_model_class(key):
