@@ -18,7 +18,8 @@ from pictor.xomics.ml.logistic_regression import LogisticRegression
 from pictor.xomics.ml.support_vector_machine import SupportVectorMachine
 from pictor.xomics.ml.support_vector_regressor import SupportVectorRegressor
 from pictor.xomics.ml.decision_tree import DecisionTree
-from pictor.xomics.ml.random_forest import RandomForestClassifier
+from pictor.xomics.ml.random_forest_classifier import RandomForestClassifier
+from pictor.xomics.ml.random_forest_regressor import RandomForestRegressor
 
 try:
   from pictor.xomics.ml.xgboost import XGBClassifier
@@ -35,11 +36,13 @@ MODEL_CLASS_DICT = {
   'svc': SupportVectorMachine,
   'dt': DecisionTree,
   'rf': RandomForestClassifier,
+  'rfc': RandomForestClassifier,
   # 'xgb': XGBClassifier,
 
   'eln': ElasticNet,
   'lir': LinearRegression,
   'svr': SupportVectorRegressor,
+  'rfr': RandomForestRegressor,
 }
 if XGBClassifier is not None: MODEL_CLASS_DICT['xgb'] = XGBClassifier
 

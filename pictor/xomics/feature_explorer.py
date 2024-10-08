@@ -420,6 +420,8 @@ class FeatureExplorer(Plotter):
 
         - lir: Linear Regression
         - eln: Elastic Net
+        - svr: Support Vector Regressor
+        - rfr: Random Forest Regressor
 
       nested: int, 1: option to use nested cross validation. Otherwise,
                       hyper-parameters are optimized based on whole dataset
