@@ -38,6 +38,12 @@ class SignalGroup(Nomear):
   # region: Properties
 
   @Nomear.property()
+  def channel_names(self):
+    results = []
+    for ds in self.digital_signals: results.extend(ds.channels_names)
+    return results
+
+  @Nomear.property()
   def name_tick_data_list(self):
     res = []
     for ds in self.digital_signals:

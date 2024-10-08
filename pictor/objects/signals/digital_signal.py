@@ -116,7 +116,7 @@ class DigitalSignal(Nomear):
   def add_channel(self, sequence: np.ndarray, name=None):
     assert not self.in_pocket('name_tick_data_list')
     if len(sequence.shape) == 1:
-      sequence = sequence.reshape(shape=[-1, 1])
+      sequence = sequence.reshape([-1, 1])
     assert len(sequence.shape) == 2 and len(sequence) == self.length
     # Add sequence
     self.data = np.concatenate([self.data, sequence], axis=-1)
