@@ -383,6 +383,11 @@ class FeatureExplorer(Plotter):
     """Feature selection using p-value sorting."""
     self.select_features('pval', k=k, standardize=standardize)
 
+  def sf_ucp(self, k: int=10, threshold: float=0.9, standardize: int=1):
+    """Feature selection using uncorrelated p-value sorting."""
+    self.select_features('ucp', k=k, threshold=threshold,
+                         standardize=standardize)
+
   def select_features(self, method: str, **kwargs):
     """Select features using a specific method"""
     # key = (method, tuple(kwargs.items()))
@@ -561,6 +566,7 @@ class FeatureExplorer(Plotter):
     - sf_mrmr: select features using mRMR
     - sf_rfe: select features using FRE
     - sf_pval: select features using PVAL
+    - sf_ucp: select uncorrelated features using PVAL
     """
     self.select_features('indices', indices=indices, start_from_1=True)
 

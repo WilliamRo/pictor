@@ -19,6 +19,7 @@ from .dr_engine import DREngine
 
 def get_reducer_class(key):
   from pictor.xomics.ml.dr.pca import PCA
+  from pictor.xomics.ml.dr.ucp import UCP
   from pictor.xomics.ml.dr.lasso import LASSO
   from pictor.xomics.ml.dr.mrmr import MRMR
   from pictor.xomics.ml.dr.indices import Indices
@@ -34,6 +35,7 @@ def get_reducer_class(key):
     'rfe': RFE,
     'sig': PVAL,
     'pval': PVAL,
+    'ucp': UCP,
   }[key.lower()]
 
   return ReducerClass
