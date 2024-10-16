@@ -14,7 +14,6 @@
 # ===-==================================================================-=======
 from collections import OrderedDict
 from collections.abc import Iterable
-from numpy.lib.function_base import iterable
 from pictor.xomics.stat_analyzers import single_factor_analysis
 from roma import console
 from roma import io
@@ -305,8 +304,22 @@ class Omix(Nomear):
   def set_targets(self, key, return_new_omix=True):
     targets, target_labels = self.target_collection[key]
 
+    nan_mask = np.isnan(targets)
+
+    if nan_mask.any():
+      assert return_new_omix, '!! nan_mask is not supported when return_new_omix is False'
+      console.show_status(f'Sample number reduced from {len(self.sample_labels)} '
+                          f'to {sum(~nan_mask)}.')
+
     if return_new_omix:
-      return self.duplicate(targets=targets, target_labels=target_labels)
+      mask = ~nan_mask
+      features = self.features[mask]
+      targets = targets[mask]
+      sample_labels = np.array(self.sample_labels)[mask]
+
+      return self.duplicate(features=features, targets=targets,
+                            sample_labels=sample_labels,
+                            target_labels=target_labels)
 
     self.targets = targets
     self._target_labels = target_labels

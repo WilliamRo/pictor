@@ -260,8 +260,18 @@ class FeatureExplorer(Plotter):
     - http://www.stats.gla.ac.uk/steps/glossary/confidence_intervals.html#conflim
     """
     # fit a curve to the data using a least squares 1st order polynomial fit
-    z = np.polyfit(x, y, 1)
-    model = np.poly1d(z)
+    try:
+      z = np.polyfit(x, y, 1)
+      model = np.poly1d(z)
+    except Exception as e:
+      # Show all error info
+      warnings.warn(f'Error in fitting line: {e}')
+
+      ax.scatter(x, y, c='#5b79ca', s=10)
+      ax.set_xlabel(x_label)
+      ax.set_ylabel(self.target_labels[0])
+
+      return
 
     # get the coordinates for the fit curve
     n = len(x)  # number of samples in original fit
