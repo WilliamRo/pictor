@@ -237,7 +237,7 @@ class Pipeline(Nomear):
       sf_key = key[0]
 
       # Add feature number to specific methods
-      if sf_key in ('pca', 'mrmr', 'sig', 'pval'):
+      if sf_key in ('pca', 'mrmr', 'sig', 'pval', 'ucp'):
         arg, val = key[1][0]
         if arg in ('n_components', 'k'):
           sf_key += f'-{val}'

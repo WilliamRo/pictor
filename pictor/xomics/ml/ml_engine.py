@@ -272,6 +272,11 @@ class MLEngine(Nomear):
     if not kwargs.get('save_models', False): models = ()
     package = FitPackage.pack(predictions, probabilities, om_whole, models, hp,
                               sub_packages=fold_pkgs, reducers=reducers)
+
+    # This is for the convenience of evaluation
+    package.put_into_pocket('sample_labels', om_whole.sample_labels,
+                            local=True)
+
     package.report(print_cm=kwargs.get('print_cm', False),
                    print_cm_table=kwargs.get('cm', False),
                    plot_cm=kwargs.get('plot_cm', False),
@@ -378,6 +383,11 @@ class FitPackage(Nomear):
   def __getitem__(self, item):
     if isinstance(item, str):
       item_l = item.lower()
+
+      # Sample labels is set here for avoiding errors
+      if item == 'sample_labels':
+        if self.in_pocket(item): return self.get_from_pocket(item)
+        else: raise ValueError('!! sample_labels is not in pocket.')
 
       # Metrics like MAE is recorded in constructor
       # TODO: workaround for saved pkgs of old versions which has no

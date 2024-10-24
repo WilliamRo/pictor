@@ -249,7 +249,9 @@ class ConfusionMatrix(object):
       return TN / np.maximum(PN, 1)
 
     if key in ('f1', 'f1-score'):
-      return 2 * TP / np.maximum(2 * TP + FP + FN, 1)
+      # TODO: the line below is not right
+      # return 2 * TP / np.maximum(2 * TP + FP + FN, 1)
+      return self.macro_F1
     if key in ('acc', 'accuracy'):
       return (TP + TN) / np.maximum(P + N, 1)
     if key in ('balanced accuracy', 'ba'):
