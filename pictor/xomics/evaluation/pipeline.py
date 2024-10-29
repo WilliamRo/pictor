@@ -234,13 +234,16 @@ class Pipeline(Nomear):
     for key, omix_list in self.sub_space_dict.items():
       # (1) Generate reducer key
       # key = ('sf_method_name', (('arg_1', arg_1_value), ...))
-      sf_key = key[0]
+      sf_key, arg_value_list = key
 
       # Add feature number to specific methods
-      if sf_key in ('pca', 'mrmr', 'sig', 'pval', 'ucp'):
-        arg, val = key[1][0]
-        if arg in ('n_components', 'k'):
-          sf_key += f'-{val}'
+      EXCLUSIONS = ['save_model']
+      if len(arg_value_list) > 0:
+        for arg, val in arg_value_list:
+          if arg in EXCLUSIONS: continue
+
+          if arg in ('n_components', 'k'): sf_key += f'-{val}'
+          else: sf_key += f'-{arg[0]}{val}'
 
       # Register sf_key if not exists
       if sf_key not in row_labels: row_labels.append(sf_key)
