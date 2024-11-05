@@ -287,7 +287,7 @@ class Pipeline(Nomear):
 
   def report(self, metrics=None):
     if metrics is None:
-      if self.omix.targets_are_numerical: metrics = ('MAE',)
+      if self.omix.targets_are_numerical: metrics = ('MAE', 'R')
       else: metrics = ('AUC', 'F1')
 
     console.section('Pipeline Report')
@@ -313,7 +313,7 @@ class Pipeline(Nomear):
   def plot_matrix(self, fig_size=(5, 5), omix_refit=None, omix_test=None,
                   random_state=None, verbose=0):
 
-    if self.omix.targets_are_numerical: metrics = ['MAE']
+    if self.omix.targets_are_numerical: metrics = ['MAE', 'R']
     else: metrics = ['AUC', 'Sensitivity', 'Selectivity',
                      'Balanced Accuracy', 'Accuracy', 'F1']
 

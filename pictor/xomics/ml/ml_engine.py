@@ -376,6 +376,12 @@ class FitPackage(Nomear):
   @property
   def model_name(self): return self.models[0].__class__.__name__
 
+  @property
+  def pearson_r(self):
+    from scipy import stats
+    _r, _pval = stats.pearsonr(self.targets, self.probabilities)
+    return _r
+
   # endregion: Properties
 
   # region: Overriding
@@ -388,6 +394,9 @@ class FitPackage(Nomear):
       if item == 'sample_labels':
         if self.in_pocket(item): return self.get_from_pocket(item)
         else: raise ValueError('!! sample_labels is not in pocket.')
+
+      # For regressor results
+      if item_l == 'r': return self.pearson_r
 
       # Metrics like MAE is recorded in constructor
       # TODO: workaround for saved pkgs of old versions which has no
@@ -494,10 +503,12 @@ class FitPackage(Nomear):
     mae = None
 
     if omix.targets_are_numerical:
+      # (1) For regressors
       model_is_regressor = True
 
       mae = np.mean(np.abs(probabilities - omix.targets))
     else:
+      # (2) For classifiers
       cm = ConfusionMatrix(num_classes=2, class_names=omix.target_labels)
       cm.fill(predictions, omix.targets)
 
