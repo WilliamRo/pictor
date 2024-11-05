@@ -42,6 +42,7 @@ class MatrixViewer(Plotter):
     self.new_settable_attr('auto_fcolor', True, bool, 'Auto flip font color')
     self.new_settable_attr('wt', 0.7, float, 'White font threshold')
     self.new_settable_attr('ci', False, bool, 'Option to show CI95')
+    self.new_settable_attr('std', False, bool, 'Option to show STD')
     self.new_settable_attr('fontsize', 8, int, 'Font size')
 
     self.new_settable_attr('hide_zero', True, bool, 'Option to hide zeros')
@@ -65,12 +66,20 @@ class MatrixViewer(Plotter):
           color = '#FFF' if matrix[i, j] > wt else '#000'
 
         text = f'{matrix[i, j]:.{d}f}'
-        if self.get('ci') and self.values is not None:
+
+        if self.get('std') and self.values is not None:
+          mu = matrix[i, j]
+          values = self.values[x][i][j]
+          assert np.mean(values) == mu
+          text += f'\n ±{np.std(values):.{d}f}'
+
+        if self.get('ci') and not self.get('std') and self.values is not None:
           mu = matrix[i, j]
           values = self.values[x][i][j]
           assert np.mean(values) == mu
           l, h = calc_CI(values, alpha=0.95, key=x)
           text += f'\n [{l:.{d}f},{h:.{d}f}]'
+
         ax.text(j, i, text, ha='center', va='center',
                 fontsize=self.get('fontsize'), color=color)
 
@@ -97,6 +106,7 @@ class MatrixViewer(Plotter):
     self.register_a_shortcut(
       'A', lambda: self.flip('auto_fcolor'), 'Turn on/off auto_fcolor')
     self.register_a_shortcut('I', lambda: self.flip('ci'), 'Turn on/off ci')
+    self.register_a_shortcut('S', lambda: self.flip('std'), 'Turn on/off std')
 
 
   @classmethod

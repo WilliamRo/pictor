@@ -77,7 +77,10 @@ class MLEngine(Nomear):
     n_splits = kwargs.get('n_splits', 5)
     n_jobs = kwargs.get('n_jobs', self.n_jobs)
     strategy = kwargs.get('strategy', 'grid')
-    hp_space = kwargs.get('hp_space', self.DEFAULT_HP_SPACE)
+
+    hp_space = kwargs.get('hp_space', None)
+    if hp_space is None: hp_space = self.DEFAULT_HP_SPACE
+
     hp_model_init_kwargs = kwargs.get('hp_model_init_kwargs',
                                       self.DEFAULT_HP_MODEL_INIT_KWARGS)
 
@@ -180,6 +183,7 @@ class MLEngine(Nomear):
     random_state = kwargs.get('random_state', None)
 
     hp = kwargs.get('hp', None)
+    hp_space = kwargs.get('hp_space', None)
     n_splits = kwargs.get('n_splits', 5)
     shuffle = kwargs.get('shuffle', True)
 
@@ -195,7 +199,7 @@ class MLEngine(Nomear):
         raise AssertionError(r'!! nested dimension reduction should be used '
                              r'with callable nested hp tuning')
       hp = self.tune_hyperparameters(
-        omix, verbose=verbose, random_state=random_state)
+        omix, verbose=verbose, random_state=random_state, hp_space=hp_space)
 
     # (2) Fit data in k-fold manner
     if verbose > 0: console.show_status(
@@ -242,7 +246,8 @@ class MLEngine(Nomear):
         if verbose > 0: console.show_status(
           f'Tuning hyperparameters for fold-{i+1}/{n_splits}...',)
         hp = self.tune_hyperparameters(
-          om_train, verbose=verbose, random_state=random_state)
+          om_train, verbose=verbose, random_state=random_state,
+          hp_space=hp_space)
 
       # (2.2.4) Fit the model
       model = self.fit(om_train, hp=hp, random_state=random_state)

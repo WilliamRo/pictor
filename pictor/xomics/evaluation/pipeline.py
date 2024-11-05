@@ -164,6 +164,7 @@ class Pipeline(Nomear):
     # (0) Get settings
     prompt = '[PP_FIT] >>'
     verbose = kwargs.get('verbose', 0)
+    hp_space = kwargs.get('hp_space', None)
 
     # (1) Initiate a model
     ModelClass = get_model_class(model)
@@ -192,7 +193,8 @@ class Pipeline(Nomear):
         if not isinstance(omix, Omix) and isinstance(omix, tuple):
           raise AssertionError(r'!! nested dimension reduction should be used '
                                r'with callable nested hp tuning')
-        hp = model.tune_hyperparameters(omix, verbose=verbose)
+        hp = model.tune_hyperparameters(
+          omix, verbose=verbose, hp_space=hp_space)
       else: hp = None
 
       # (2.2) Repeatedly fit model on omix
