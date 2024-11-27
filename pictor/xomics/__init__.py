@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ======-=======================================================-===============
-from .feature_explorer import FeatureExplorer
+try:
+  from .feature_explorer import FeatureExplorer
+except:
+  # e.g., in Linux systems, plotting is not supported
+  print('!! Failed to import `FeatureExplorer` from `feature_explorer`')
+
 from .omix import Omix
 
 # Try accelerating

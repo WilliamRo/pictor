@@ -387,6 +387,17 @@ class FitPackage(Nomear):
     _r, _pval = stats.pearsonr(self.targets, self.probabilities)
     return _r
 
+  @property
+  def ordered_targets_and_probs(self):
+    sample_labels = self.get_from_pocket('sample_labels', key_should_exist=True)
+    sample_labels = list(sample_labels)
+
+    # Sort targets and probabilities by sample_labels
+    sorted_sample_labels = sorted(sample_labels)
+    sorted_indices = [sample_labels.index(i) for i in sorted_sample_labels]
+
+    return self.targets[sorted_indices], self.probabilities[sorted_indices]
+
   # endregion: Properties
 
   # region: Overriding

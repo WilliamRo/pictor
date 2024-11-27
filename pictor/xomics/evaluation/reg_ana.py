@@ -53,7 +53,9 @@ class RegressionAnalysis(Nomear):
 
     # Create figure and axis if not provided
     if ax is None:
-      fig = plt.figure(**kwargs)
+      figsize = kwargs.get('figsize', (6, 6))
+
+      fig = plt.figure(figsize=figsize)
       ax: plt.Axes = fig.add_subplot(111)
 
     # Plot ideal line
@@ -76,6 +78,19 @@ class RegressionAnalysis(Nomear):
 
     ax.legend(fontsize=kwargs.get('fontsize', 10))
     ax.grid(True)
+
+    # Upper left symbol
+    symbol = kwargs.get('upper_left', None)
+    if symbol is not None:
+      ax.text(
+        kwargs.get('upper_left_x', -0.1), 1.0, symbol,  # x and y coordinates (figure-relative; upper-left)
+        transform=ax.transAxes,
+        # Use axes coordinates (0, 0 = bottom-left; 1, 1 = top-right)
+        fontsize=16,  # Adjust font size
+        fontweight='bold',  # Make it bold
+        va='top',  # Vertical alignment (top of letter aligns at y=0.98)
+        ha='left'  # Horizontal alignment (left of letter aligns at x=0.02)
+      )
 
     if plt_show:
       plt.tight_layout()

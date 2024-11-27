@@ -111,14 +111,16 @@ class MatrixViewer(Plotter):
 
   @classmethod
   def show_matrices(cls, matrix_dict, row_keys, col_keys, fig_size=(5, 5),
-                    values=None, cmap='Blues'):
+                    values=None, n_digit=2, cmap='Blues', title=None):
     from pictor.pictor import Pictor
 
-    p = Pictor('Matrix Viewer', figure_size=fig_size)
+    if title is None: title = 'Matrix Viewer'
+    p = Pictor(title, figure_size=fig_size)
     p.objects = list(matrix_dict.keys())
 
     mv = cls(matrix_dict, row_keys, col_keys, pictor=p, values=values)
     mv.set('cmap', cmap, verbose=False)
+    mv.set('digit', n_digit, verbose=False)
     p.add_plotter(mv)
 
     p.show()

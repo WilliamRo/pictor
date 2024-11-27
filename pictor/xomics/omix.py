@@ -14,7 +14,6 @@
 # ===-==================================================================-=======
 from collections import OrderedDict
 from collections.abc import Iterable
-from pictor.xomics.stat_analyzers import single_factor_analysis
 from roma import console
 from roma import io
 from roma import Nomear
@@ -95,6 +94,8 @@ class Omix(Nomear):
     """reports[n] = [(i, j, p_val, method), ...], sorted by p_val,
        here n denotes the n-th feature.
     """
+    from pictor.xomics.stat_analyzers import single_factor_analysis
+
     reports = []
     for n in range(self.features.shape[1]):
       features = self.features[:, n]

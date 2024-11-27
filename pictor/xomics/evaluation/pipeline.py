@@ -313,7 +313,7 @@ class Pipeline(Nomear):
     print('-' * 79)
 
   def plot_matrix(self, fig_size=(5, 5), omix_refit=None, omix_test=None,
-                  random_state=None, verbose=0):
+                  random_state=None, verbose=0, title=None):
 
     if self.omix.targets_are_numerical: metrics = ['MAE', 'R']
     else: metrics = ['AUC', 'Sensitivity', 'Selectivity',
@@ -344,7 +344,7 @@ class Pipeline(Nomear):
 
     cmap = 'Blues' if omix_test is None else 'Oranges'
     MatrixViewer.show_matrices(matrices, row_labels, col_labels, fig_size,
-                               values=value_dict, cmap=cmap)
+                               values=value_dict, cmap=cmap, title=title)
 
   def plot_calibration_curve(self, sf_method, *ml_methods, n_bins=10, **kwargs):
     from pictor.xomics.evaluation.calibration import Calibrator

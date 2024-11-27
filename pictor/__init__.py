@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ======-=========================================================-=============
-from .pictor import Pictor
-from .plotters.plotter_base import Plotter
+try:
+  from .pictor import Pictor
+  from .plotters.plotter_base import Plotter
+except:
+  print('!! Failed to import Pictor and Plotter')
 
-# ------------------------------------------------------------------------------
-# Deprecated Objects
-# ------------------------------------------------------------------------------
-from .vinci.vinci import DaVinci
