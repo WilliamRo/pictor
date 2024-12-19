@@ -138,6 +138,7 @@ class Plotter(Nomear):
     elif (_type.__name__ == 'bool' and isinstance(value, str)
           and value.lower() in ('true', 'false', '0', '1')):
       value = True if value.lower() in ('true', '1') else False
+    elif callable(value): value = value
     else: value = _type(value)
     self.settable_attributes[key][0] = value
 
