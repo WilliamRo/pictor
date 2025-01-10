@@ -28,10 +28,21 @@ import numpy as np
 
 class Pipeline(Nomear):
   """Omix-based pipeline for feature selection, fitting, and evaluation.
+
+  work_dir
+     |- xxx.omix
+     |- sub_space_1
+     |- sub_space_2
+        |- model_1
+        |- model_2
+           |- pkg_1
+           |- pkg_2
+           ...
   """
   prompt = '[PIPELINE] >>'
 
-  def __init__(self, omix: Omix, ignore_warnings=False, save_models=False):
+  def __init__(self, omix: Omix, ignore_warnings=False, save_models=False,
+               work_dir=None):
     # 0. Ignore warnings if required
     if ignore_warnings:
       warnings.simplefilter('ignore')
@@ -40,6 +51,7 @@ class Pipeline(Nomear):
 
     self.omix: Omix = omix
     self.save_models = save_models
+    self.work_dir = work_dir
 
   # region: Properties
 
@@ -213,6 +225,8 @@ class Pipeline(Nomear):
   def get_fit_packages(self, omix: Omix) -> OrderedDict:
     """Format: {'model_name': [pkg_1, pkg_2, ...], ...}"""
     if isinstance(omix, tuple):
+      # This happens in nested dimension reduction,
+      #   where omix = (omix, 'sf_method_str', kwargs)
       assert len(omix) == 3
       omix = omix[0]
     return omix.get_from_pocket(
@@ -253,6 +267,8 @@ class Pipeline(Nomear):
       # (2) Traverse through models
       for omix in omix_list:
         # {'model_name': [pkg_1, pkg_2, ...], ...}
+        # Note that, in nested dimension reduction, omix is a tuple of
+        #   (omix, 'sf_method_str', kwargs)
         pkg_dict: OrderedDict = self.get_fit_packages(omix)
         for ml_key, pkg_list in pkg_dict.items():
           # (2.1) Settle ml_key
