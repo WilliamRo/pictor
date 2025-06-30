@@ -210,6 +210,41 @@ class Omix(Nomear):
 
   # endregion: Feature Selection
 
+  # region: Pipeline
+
+  def pipeline(self, sf: str = 'ucp', ml: str = 'lr',
+               r: int = 1, k: int = 50, t: float = 0.8, report: int = 0):
+    """Run `feature selection` -> `machine learning` pipeline
+
+    :param sf: feature selection methods. Examples: 'ucp;lasso', 'lasso'
+    :param ml: machine learning methods. Examples: 'lr;svm', 'lr'
+    :param r: repeat times
+    :param k: number of features to select (if applicable)
+    :param t: threshold for feature selection (if applicable)
+    :param report: 0 for no report, 1 for report, 2 for report and plot
+    """
+    from pictor.xomics.evaluation.pipeline import Pipeline
+
+    pi = Pipeline(self, ignore_warnings=1, save_models=0)
+
+    # (1) Feature selection
+    kwargs = {'repeats': r, 'nested': True, 'threshold': t,
+              'k': k, 'show_progress': True}
+    for method in sf.split(';'): pi.create_sub_space(method, **kwargs)
+
+    # (2) Machine learning
+    kwargs = {'repeats': r, 'nested': True, 'show_progress': True}
+    for method in ml.split(';'):
+      pi.fit_traverse_spaces(method, **kwargs)
+
+    # (3) Report
+    if report > 0: pi.report()
+    if report > 1: pi.plot_matrix()
+
+    return pi
+
+  # endregion: Pipeline
+
   # region: Visualization
 
   def show_in_explorer(self, title=None, fig_size=(5, 5), ignore_warnings=True):

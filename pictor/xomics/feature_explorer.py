@@ -467,6 +467,33 @@ class FeatureExplorer(Plotter):
                      plot_cm=plot_cm, mi=mi, random_state=seed, ra=ra,
                      mae=1, show_signature=sig == 1)
 
+  def pp(self, sf: str = 'ucp;lasso', ml: str = 'lr;dt',
+         r: int = 1, k: int = 20, t: float = 0.8,
+         report_only: int = 0, plot: int = 0):
+    """
+
+    :param sf: feature selection methods. Examples: 'ucp;lasso', 'lasso'
+    :param ml: machine learning methods. Examples: 'lr;svm', 'lr'
+    :param r: repeat times
+    :param k: number of features to select (if applicable)
+    :param t: threshold for feature selection (if applicable)
+    :param report_only: 1: only report results without training models
+    :param plot: 1: plot the result matrix
+    """
+    from pictor.xomics.evaluation.pipeline import Pipeline
+
+    # If report_only is set, we only report the results
+    if report_only:
+      pi = Pipeline(self.omix, ignore_warnings=1, save_models=0)
+      pi.report()
+      if plot: pi.plot_matrix()
+      return
+
+    # Otherwise
+    pi = self.omix.pipeline(sf, ml, r, k, t, False)
+    pi.report()
+    if plot: pi.plot_matrix()
+
   # endregion: Machine Learning
 
   def report(self, report_feature_sum: int=0, report_stat: int=0):

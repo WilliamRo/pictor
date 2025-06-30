@@ -79,7 +79,21 @@ class MLEngine(Nomear):
     strategy = kwargs.get('strategy', 'grid')
 
     hp_space = kwargs.get('hp_space', None)
-    if hp_space is None: hp_space = self.DEFAULT_HP_SPACE
+    if hp_space is None:
+      # Find hyperparameter space from class definition
+      hp_space = self.DEFAULT_HP_SPACE
+    elif isinstance(hp_space, str):
+      if hp_space.lower() in ('s', 'small'):
+        n_splits = 2
+        hp_space = getattr(self, 'HP_SPACE_S', self.DEFAULT_HP_SPACE)
+      elif hp_space.lower() in ('m', 'medium'):
+        n_splits = 3
+        hp_space = getattr(self, 'HP_SPACE_M', self.DEFAULT_HP_SPACE)
+      elif hp_space.lower() in ('l', 'large'):
+        n_splits = 5
+        hp_space = getattr(self, 'HP_SPACE_L', self.DEFAULT_HP_SPACE)
+      else:
+        raise KeyError(f'!! Unknown keyword for hp_space: {hp_space}')
 
     hp_model_init_kwargs = kwargs.get('hp_model_init_kwargs',
                                       self.DEFAULT_HP_MODEL_INIT_KWARGS)
@@ -228,8 +242,10 @@ class MLEngine(Nomear):
       # (2.2.2) Perform dimension reduction if specified
       if nested_dr:
         # (2.2.2.0) Report progress if required
-        if verbose > 0: console.show_status(
-          f'Reducing dimension for fold-{i+1}/{n_splits}...',)
+        if verbose > 0:
+          console.show_status(
+            f'Reducing dimension for fold-{i+1}/{n_splits}...', prompt='[DR] >>')
+          tic = time.time()
 
         # (2.2.2.1) Perform dimension reduction on om_train
         om_train: Omix = om_train.select_features(
@@ -240,6 +256,11 @@ class MLEngine(Nomear):
         om_test = reducer.reduce_dimension(om_test)
 
         reducers.append(reducer)
+
+        if verbose > 0:
+          elapsed = time.time() - tic
+          console.show_status(
+            f'{om_train.n_features} features selected. Elapsed time: {elapsed:.2f} seconds', prompt='[DR] >>')
 
       # (2.2.3) Tune parameters on om_train if necessary
       if nested_ml:

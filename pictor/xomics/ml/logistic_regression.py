@@ -41,4 +41,40 @@ class LogisticRegression(MLEngine):
     'l1_ratio': np.linspace(0, 1, 5),
   }
 
+  HP_SPACE_S = {
+    'penalty': [
+      'elasticnet',
+    ],
+    'solver': [
+      'saga',  # best choice by default
+    ],
+    'C': np.logspace(-1, 4, 3),
+    'l1_ratio': np.linspace(0, 1, 3),
+  }
+
+  HP_SPACE_M = {
+    'penalty': [
+      'elasticnet',
+    ],
+    'solver': [
+      'saga',  # best choice by default
+    ],
+    'C': np.logspace(-1, 4, 6),
+    'l1_ratio': np.linspace(0, 1, 5),
+  }
+
+  HP_SPACE_L = {
+    'penalty': [
+      'elasticnet',
+      'none'
+    ],
+    'solver': [
+      'lbfgs',    # analogue of the Newton’s Method
+      'saga',       # best choice by default
+    ],
+    'C': np.logspace(-1, 4, 6),
+    'l1_ratio': np.linspace(0, 1, 5),
+  }
+
+
   DEFAULT_HP_MODEL_INIT_KWARGS = {'tol': 1e-2}
