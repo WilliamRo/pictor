@@ -233,7 +233,8 @@ class Omix(Nomear):
     for method in sf.split(';'): pi.create_sub_space(method, **kwargs)
 
     # (2) Machine learning
-    kwargs = {'repeats': r, 'nested': True, 'show_progress': True}
+    kwargs = {'repeats': r, 'nested': True, 'show_progress': True,
+              'n_splits': 2}
     for method in ml.split(';'):
       pi.fit_traverse_spaces(method, **kwargs)
 
