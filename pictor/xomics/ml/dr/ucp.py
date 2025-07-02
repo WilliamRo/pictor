@@ -29,14 +29,16 @@ class UCP(DREngine):
   class Defaults:
     K = 10          # Default number of components
     THRESHOLD = 0.9
+    M = None
 
   def _fit_reducer(self, omix: Omix, **kwargs):
     # (1) Get configs
     k = kwargs.get('k', self.Defaults.K)
     assert k > 0
     threshold = kwargs.get('threshold', self.Defaults.THRESHOLD)
+    m = kwargs.get('m', self.Defaults.M)
 
-    self.dev_report(f'k = {k}, threshold = {threshold}')
+    self.dev_report(f'k = {k}, threshold = {threshold}, m = {m}')
 
     # (2) Create ranking indices
     tic = time.time()
@@ -55,19 +57,48 @@ class UCP(DREngine):
     self.dev_report(f'Correlation matrix calculated in {time.time() - tic:.2f} seconds')
 
     # (4) Remove correlated features
+    # TODO
+    from roma import console
+
+    self.dev_report('Selecting features ...')
     remainder = indices[:]
+
+    # This line speeds up the process significantly
+    if m is not None: remainder = remainder[:m]
+
     uc_indices = []
     while len(remainder) > 0:
-      # (4.1) Get the first feature
-      uc_indices.append(remainder[0])
-      remainder = remainder[1:]
+      # TODO
+      # if self.dev_mode:
+      #   _tic = time.time()
+      #   console.print_progress(len(indices) - len(remainder), len(indices))
 
-      # (4.2) Remove correlated features
-      remainder = [i for i in remainder
-                   if max([corr_mat[i, j] for j in uc_indices]) < threshold]
+      version = 2
+      if version == 1:
+        # (4.1) Get the first feature
+        uc_indices.append(remainder[0])
+        remainder = remainder[1:]
+
+        # (4.2) Remove correlated features
+        remainder = [i for i in remainder
+                     if max([corr_mat[i, j] for j in uc_indices]) < threshold]
+      elif version == 2:
+        uc_indices.append(remainder[0])
+        if len(uc_indices) == k:
+          break
+
+        submat = corr_mat[remainder, :][:, uc_indices]
+        max_corr = np.max(submat, axis=1)
+        keep_mask = max_corr < threshold
+        remainder = [remainder[k] for k in np.where(keep_mask)[0]]
+      else: raise ValueError(f'Invalid version: {version}')
+
+      # TODO
+      # if self.dev_mode: console.show_status(f'{time.time() - _tic:.2f} seconds, {len(remainder)} features left',)
+
+    self.dev_report(f'Feature selection completed.')
 
     # (5) Return reducer, and indices
-    self.dev_report(f'Feature selection completed.')
     return uc_indices, uc_indices[:k]
 
   def _reduce_dimension(self, omix: Omix, **kwargs) -> Omix:
@@ -81,13 +112,13 @@ if __name__ == '__main__':
   DREngine.enable_dev_mode()
 
   # Configuration
-  n_samples = 200
+  n_samples = 100
   # n_features = 1000
-  n_features = 7000
+  n_features = 2000
 
   # Test
   omix = Omix.gen_psudo_omix(n_samples, n_features)
-  omix.select_features('UCP', k=10, threshold=0.9)
+  omix.select_features('UCP', k=10, threshold=0.9, m=500)
   # omix.show_in_explorer()
 
   print('Done.')
