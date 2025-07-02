@@ -13,9 +13,10 @@
 # limitations under the License.
 # ===-=====================================================================-====
 import numpy as np
+import os
 
 from pictor.xomics.omix import Omix
-from roma import Nomear
+from roma import Nomear, console
 
 
 
@@ -53,6 +54,12 @@ class DREngine(Nomear):
 
   @property
   def name(self): return self.__class__.__name__
+
+  @property
+  def prompt(self): return f'[{self.name}] >>'
+
+  @property
+  def dev_mode(self): return os.environ.get('DRENGINE_DEV_MODE', '0') == '1'
 
   # endregion: Properties
 
@@ -103,10 +110,19 @@ class DREngine(Nomear):
     self.put_into_pocket(self.Keys.Reducer, reducer, local=True,
                          exclusive=exclusive)
 
+  @classmethod
+  def enable_dev_mode(cls):
+    """Enable the development mode."""
+    os.environ['DRENGINE_DEV_MODE'] = '1'
+    console.show_status(f'DREngine development mode enabled')
+
   # endregion: Public Methods
 
   # region: Private Methods
 
+  def dev_report(self, text: str):
+    if not self.dev_mode: return
+    console.show_status(text, prompt=self.prompt)
 
   # endregion: Private Methods
 

@@ -234,7 +234,7 @@ class Omix(Nomear):
 
     # (2) Machine learning
     kwargs = {'repeats': r, 'nested': True, 'show_progress': True,
-              'n_splits': 2}
+              'n_splits': 2, 'verbose': True}
     for method in ml.split(';'):
       pi.fit_traverse_spaces(method, **kwargs)
 
@@ -547,6 +547,14 @@ class Omix(Nomear):
     features = np.stack(features, axis=0)
     return self.duplicate(features=features, targets=targets,
                           sample_labels=sample_labels, data_name=data_name)
+
+  @staticmethod
+  def gen_psudo_omix(n_samples: int, n_features: int):
+    """Generate a pseudo Omix with random features and targets"""
+    features = np.random.rand(n_samples, n_features)
+    targets = np.random.randint(0, 2, size=n_samples)  # Binary targets
+    return Omix(features, targets,
+                target_labels=('Negative', 'Positive'), data_name='Pseudo Omix')
 
   # endregion: Public Methods
 
