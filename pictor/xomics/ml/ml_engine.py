@@ -244,7 +244,8 @@ class MLEngine(Nomear):
         # (2.2.2.0) Report progress if required
         if verbose > 0:
           console.show_status(
-            f'Reducing dimension for fold-{i+1}/{n_splits}...', prompt='[DR] >>')
+            f'Reducing dimension for fold-{i+1}/{n_splits}...',
+            prompt=f'[{dr_key}] >>')
           tic = time.time()
 
         # (2.2.2.1) Perform dimension reduction on om_train
@@ -260,7 +261,7 @@ class MLEngine(Nomear):
         if verbose > 0:
           elapsed = time.time() - tic
           console.show_status(
-            f'{om_train.n_features} features selected. Elapsed time: {elapsed:.2f} seconds', prompt='[DR] >>')
+            f'{om_train.n_features} features selected. Elapsed time: {elapsed:.2f} seconds', prompt=f'[{dr_key}] >>')
 
       # (2.2.3) Tune parameters on om_train if necessary
       if nested_ml:
