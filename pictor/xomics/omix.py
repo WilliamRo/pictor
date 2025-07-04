@@ -507,7 +507,7 @@ class Omix(Nomear):
 
     s_indices, o_indices = [], []
     for i, label in enumerate(self.sample_labels):
-      js = np.where(other.sample_labels == label)[0]
+      js = np.where(np.ndarray(other.sample_labels) == label)[0]
       # assert len(js) < 2
       if len(js) == 0: continue
       j = js[0]
@@ -516,9 +516,9 @@ class Omix(Nomear):
 
     s_features, o_features = self.features[s_indices], other.features[o_indices]
     features = np.concatenate((s_features, o_features), axis=1)
-    feature_labels = self.feature_labels + other.feature_labels
+    feature_labels = list(self.feature_labels) + list(other.feature_labels)
     sample_labels = self.sample_labels[s_indices]
-    if data_name is None: data_name = f'{self.data_name}x{other.data_name}'
+    if data_name is None: data_name = f'{self.data_name} x {other.data_name}'
 
     s_targets, o_targets = self.targets[s_indices], other.targets[o_indices]
 
