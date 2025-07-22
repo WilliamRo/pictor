@@ -549,9 +549,16 @@ class Omix(Nomear):
                           sample_labels=sample_labels, data_name=data_name)
 
   @staticmethod
-  def gen_psudo_omix(n_samples: int, n_features: int, targets=None) -> 'Omix':
+  def gen_psudo_omix(n_samples: int, n_features: int, targets=None,
+                     binary_column_indices=None) -> 'Omix':
     """Generate a pseudo Omix with random features and targets"""
     features = np.random.rand(n_samples, n_features)
+
+    # Set binary features if specified
+    if binary_column_indices is not None:
+      for i in binary_column_indices:
+        features[:, i] = np.random.randint(0, 2, size=n_samples)
+
     if targets is None: targets = np.random.randint(0, 2, size=n_samples)  # Binary targets
     return Omix(features, targets,
                 target_labels=('Negative', 'Positive'), data_name='Pseudo Omix')

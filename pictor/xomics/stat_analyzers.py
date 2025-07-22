@@ -13,12 +13,27 @@
 # limitations under the License.
 # ====-========================================================================-
 from collections import OrderedDict
+from scipy import stats
 
 import numpy as np
+import pandas as pd
 
 
 
 def single_factor_analysis(groups: list):
+  """Appropriate tests will be automatically selected for each pair of groups
+     according to feature type:
+
+     -----------------------------------------------------
+      Feature Type                  Statistical Test
+     =====================================================
+      Continuous (Normal)           Two-sample t-test
+      Continuous (Non-Normal)       Mann-Whitney U test
+      Categorical                   Chi-squared test
+      Categorical (2x2 and min<5)   Fisher's exact test
+     -----------------------------------------------------
+  """
+  # report format: (group_i, group_j, p_value, method)
   reports = []
   N = len(groups)
   for i in range(N):
@@ -31,12 +46,41 @@ def single_factor_analysis(groups: list):
 
 
 def auto_dual_test(group1, group2, return_detail=False):
-  from scipy import stats
 
-  # (1) Test normality
+  group1, group2 = np.asarray(group1), np.asarray(group2)
+  data = np.concatenate((group1, group2))
+
+  def _is_categorical():
+    if np.issubdtype(data.dtype, np.number):
+      # Check if the data is categorical by checking unique values
+      unique_values = np.unique(data)
+      # TODO: Assuming categorical if there are less than 5 unique values
+      return len(unique_values) < 5
+    return False
+
+  # (1) Check if groups are categorical
+  if _is_categorical():
+    label = [0] * len(group1) + [1] * len(group2)
+    contingency_table = pd.crosstab(data, label)
+    if contingency_table.values.min() < 5:
+      if contingency_table.shape == (2, 2):
+        odds, p = stats.fisher_exact(contingency_table)
+        method = 'f'
+      else:
+        # For larger tables and small cells, consider collapsing categories
+        raise AssertionError(
+          f"Fisher's is impractical for >2x2. Consider data re-binning.")
+    else:
+      _, p, _, _ = stats.chi2_contingency(contingency_table)
+      method = 'c'
+
+    if return_detail: return p, method
+    return p
+
+  # (2) Test normality
   normality = all([test_normality(group) for group in (group1, group2)])
 
-  # (2) Perform t-test or Mann-Whitney U test
+  # (2.1) Perform t-test or Mann-Whitney U test
   if normality:
     _, lev_p_val = stats.levene(group1, group2, center='mean')
     equal_var = lev_p_val > 0.05
