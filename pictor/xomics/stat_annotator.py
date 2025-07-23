@@ -26,7 +26,8 @@ class Annotator(Nomear):
     self.groups = groups
     self.ax = ax
 
-  def annotate(self, n_top=2):
+  def annotate(self, n_top=2, indicate_significance=True,
+               fr_control_method=None, n_features=None):
     reports = single_factor_analysis(self.groups)
 
     # Get current y limits
@@ -39,8 +40,29 @@ class Annotator(Nomear):
       self.ax.plot([i, i, j, j], [y + h * lhp, y + h, y + h, y + h * lhp],
                    lw=1.5, c=color, alpha=0.2)
       p_val_str = f'{p_val:.2E}' if p_val < 0.001 else f'{p_val:.3f}'
-      self.ax.text((i + j) * .5, y + h, f'{method}: {p_val_str}',
-                   ha='center', va='bottom', color=color)
+
+      # Generate text
+      text = f'{method}: {p_val_str}'
+      if indicate_significance:
+        sig_str = self._get_significance_str(
+          p_val, fr_control_method, n_features)
+        text = f'{text} {sig_str}'
+
+      self.ax.text(
+        (i + j) * .5, y + h, text, ha='center', va='bottom', color=color)
+
     self.ax.set_ylim(y_min, y_max + (n + n_top) * h)
 
+  def _get_significance_str(self, p, control_method, n_features):
+    assert isinstance(n_features, int) and n_features > 0
+    assert control_method in (None, 'FDR', 'FWER')
+    if control_method == 'FWER':
+      p = p * n_features
+    else:
+      # TODO: currently only FDR is supported
+      assert control_method is None, f'Invalid control method: {control_method}'
 
+    if p < 0.001: return '***'
+    elif p < 0.01: return '**'
+    elif p < 0.05: return '*'
+    else: return 'ns'  # not significant

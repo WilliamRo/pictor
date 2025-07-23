@@ -14,6 +14,7 @@
 # ====-======================================================================-==
 from collections import OrderedDict
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from pictor.xomics.stat_analyzers import is_categorical
 from pictor.xomics.stat_annotator import Annotator
 from pictor.xomics.omix import Omix
 from pictor import Plotter
@@ -45,6 +46,12 @@ class FeatureExplorer(Plotter):
     self.new_settable_attr('show_scatter', False, bool,
                            'Option to show scatter over boxplot')
     self.new_settable_attr('sc', 1.0, float, 'Scatter compactness')
+
+    self.new_settable_attr('fr_control', 'FWER', str,
+                           'False rate control method, should be'
+                           ' in (None, `FDR`, `FWER`)')
+    self.new_settable_attr('indicate_significance', True, bool,
+                           'Whether to indicate significant level')
 
   # region: Properties
 
@@ -205,6 +212,9 @@ class FeatureExplorer(Plotter):
       ax.plot(target, features[0], 'o')
       ax.set_xticks([0, 1], self.target_labels)
       ax.set_xlim(-0.5, 1.5)
+    elif is_categorical(np.concatenate(groups)):
+      self.proportion_plot(
+        ax, groups, positions=range(len(groups)), labels=self.target_labels)
     else:
       self.box_plot_pro(ax, groups,
                         showfliers=self.get('showfliers'),
@@ -217,7 +227,59 @@ class FeatureExplorer(Plotter):
     # Show statistical annotation if required
     if self.get('statanno') and all([len(g) > 1 for g in groups]):
       ann = Annotator(groups, ax)
-      ann.annotate(**kwargs)
+      ann.annotate(indicate_significance=self.get('indicate_significance'),
+                   fr_control_method=self.get('fr_control'),
+                   n_features=self.omix.n_features, **kwargs)
+
+  def proportion_plot(self, ax: plt.axes, groups, positions, labels):
+    """Plot proportion plot"""
+    unique_values = np.unique(np.concatenate(groups))
+    assert len(unique_values) < 4
+
+    # G-code:
+    n_groups = len(groups)
+    n_categories = len(unique_values)
+    width = 0.2  # width of each bar
+
+    # For colors, choose a colormap
+    if n_categories == 2:
+      category_colors = ['whitesmoke', 'powderblue']
+    elif n_categories == 3:
+      category_colors = ['whitesmoke', 'powderblue', 'lightgrey']
+    else:
+      cmap = plt.get_cmap('tab10')
+      category_colors = [cmap(i) for i in range(n_categories)]
+
+    # Calculate proportions for each group and category
+    proportions = np.zeros((n_groups, n_categories))
+    for i, group in enumerate(groups):
+      counts = np.array(
+        [(np.array(group) == val).sum() for val in unique_values])
+      proportions[i] = counts / len(group)
+
+    # Now stack bars at each position
+    bottom = np.zeros(n_groups)
+    for idx, (val, color) in enumerate(zip(unique_values, category_colors)):
+      bars = ax.bar(positions, proportions[:, idx], width, bottom=bottom,
+                    color=color, edgecolor='white', label=str(val))
+      # Optionally add proportions as text
+      for j, bar in enumerate(bars):
+        if proportions[j, idx] > 0.05:
+          ax.text(bar.get_x() + bar.get_width() / 2,
+                  bottom[j] + proportions[j, idx] / 2,
+                  f'{proportions[j, idx]:.2f}', ha='center', va='center',
+                  fontsize=9, color='black')
+      bottom += proportions[:, idx]
+
+    ax.set_xticks(positions)
+    ax.set_xticklabels(labels)
+    ax.set_ylim(0, 1)
+    ax.set_ylabel('Proportion')
+    # ax.set_title('Proportion Plot by Group')
+    ax.legend(title='Category', bbox_to_anchor=(1, 1), loc='upper left')
+
+    return ax
+
 
   def box_plot_pro(self, ax: plt.axes, groups, showfliers, positions, labels,
                    show_scatter=False):

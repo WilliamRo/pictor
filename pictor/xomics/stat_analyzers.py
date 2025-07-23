@@ -45,31 +45,35 @@ def single_factor_analysis(groups: list):
   return sorted(reports, key=lambda x: x[2], reverse=True)
 
 
+def is_categorical(data: np.ndarray):
+  if np.issubdtype(data.dtype, np.number):
+    # Check if the data is categorical by checking unique values
+    unique_values = np.unique(data)
+    # TODO: Assuming categorical if there are less than 5 unique values
+    return len(unique_values) < 5
+  return False
+
+
 def auto_dual_test(group1, group2, return_detail=False):
 
   group1, group2 = np.asarray(group1), np.asarray(group2)
   data = np.concatenate((group1, group2))
 
-  def _is_categorical():
-    if np.issubdtype(data.dtype, np.number):
-      # Check if the data is categorical by checking unique values
-      unique_values = np.unique(data)
-      # TODO: Assuming categorical if there are less than 5 unique values
-      return len(unique_values) < 5
-    return False
-
   # (1) Check if groups are categorical
-  if _is_categorical():
+  if is_categorical(data):
     label = [0] * len(group1) + [1] * len(group2)
     contingency_table = pd.crosstab(data, label)
     if contingency_table.values.min() < 5:
-      if contingency_table.shape == (2, 2):
-        odds, p = stats.fisher_exact(contingency_table)
-        method = 'f'
-      else:
-        # For larger tables and small cells, consider collapsing categories
-        raise AssertionError(
-          f"Fisher's is impractical for >2x2. Consider data re-binning.")
+      odds, p = stats.fisher_exact(contingency_table)
+      method = 'f'
+
+      # if contingency_table.shape == (2, 2):
+      #   odds, p = stats.fisher_exact(contingency_table)
+      #   method = 'f'
+      # else:
+      #   # For larger tables and small cells, consider collapsing categories
+      #   raise AssertionError(
+      #     f"Fisher's is impractical for >2x2. Consider data re-binning.")
     else:
       _, p, _, _ = stats.chi2_contingency(contingency_table)
       method = 'c'
