@@ -50,7 +50,9 @@ def is_categorical(data: np.ndarray):
     # Check if the data is categorical by checking unique values
     unique_values = np.unique(data)
     # TODO: Assuming categorical if there are less than 5 unique values
-    return len(unique_values) < 5
+    # unique values should be integer
+    return len(unique_values) < 5 and np.issubdtype(
+      unique_values.dtype, np.integer)
   return False
 
 

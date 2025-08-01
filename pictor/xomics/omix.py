@@ -530,13 +530,28 @@ class Omix(Nomear):
     omix.report()
     return omix
 
-  def select_samples(self, indices: Iterable, data_name='Selected') -> 'Omix':
+  def select_samples(self, indices: Iterable=None, data_name='Selected',
+                     target_labels=None) -> 'Omix':
+    dup_dict = {}
+
+    if target_labels is not None:
+      indices = []
+      targets = []
+      for i, tl in enumerate(target_labels):
+        group_index = self.target_labels.index(tl)
+        indices.extend(self.groups[group_index])
+        targets.extend([i] * len(self.groups[group_index]))
+
+      # Target labels should be reset
+      dup_dict['target_labels'] = target_labels
+      dup_dict['targets'] = np.array(targets)
+
     assert isinstance(indices, Iterable)
 
     label_array = np.array(self.sample_labels)
     features, targets, sample_labels = [], [], []
     for i in indices:
-      if not isinstance(i, int):
+      if not isinstance(i, np.integer):
         assert i in self.sample_labels, f'!! {i} must be in sample_labels'
         i = np.where(label_array == i)[0][0]
 
@@ -545,8 +560,10 @@ class Omix(Nomear):
       sample_labels.append(self.sample_labels[i])
 
     features = np.stack(features, axis=0)
-    return self.duplicate(features=features, targets=targets,
-                          sample_labels=sample_labels, data_name=data_name)
+
+    if 'targets' not in dup_dict: dup_dict['targets'] = targets
+    return self.duplicate(features=features, sample_labels=sample_labels,
+                          data_name=data_name, **dup_dict)
 
   @staticmethod
   def gen_psudo_omix(n_samples: int, n_features: int, targets=None,
