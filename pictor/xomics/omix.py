@@ -338,6 +338,12 @@ class Omix(Nomear):
 
     self.target_collection[key] = (targets, target_labels)
 
+  def add_targets_to_features(self, key):
+    """Move targets from target_collection to features"""
+    targets = self.target_collection[key][0].reshape(-1, 1)
+    self.features = np.concatenate((self.features, targets), axis=1)
+    self.feature_labels.append(key)
+
   def set_targets(self, key, return_new_omix=True):
     targets, target_labels = self.target_collection[key]
 

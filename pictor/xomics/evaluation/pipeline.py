@@ -213,6 +213,7 @@ class Pipeline(Nomear):
       for _ in range(repeats):
         pkg = model.fit_k_fold(omix, hp=hp, save_models=self.save_models,
                                nested_ml=nested, **kwargs)
+        if kwargs.get('report', True): pkg.report()
         pkg_dict[model_name].append(pkg)
 
     if show_progress: console.show_status(

@@ -45,14 +45,19 @@ def single_factor_analysis(groups: list):
   return sorted(reports, key=lambda x: x[2], reverse=True)
 
 
+def _is_int(array: np.ndarray):
+  """Check if the array contains only integers.
+     Note that 1.0, 2.0 are considered integers."""
+  return all([float(x).is_integer() for x in array])
+
+
 def is_categorical(data: np.ndarray):
   if np.issubdtype(data.dtype, np.number):
     # Check if the data is categorical by checking unique values
     unique_values = np.unique(data)
     # TODO: Assuming categorical if there are less than 5 unique values
     # unique values should be integer
-    return len(unique_values) < 5 and np.issubdtype(
-      unique_values.dtype, np.integer)
+    return len(unique_values) < 5 and _is_int(unique_values)
   return False
 
 
