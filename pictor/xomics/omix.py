@@ -248,8 +248,14 @@ class Omix(Nomear):
 
   # region: Visualization
 
-  def show_in_explorer(self, title=None, fig_size=(5, 5), ignore_warnings=True):
+  def show_in_explorer(self, title=None, fig_size=(5, 5), ignore_warnings=True,
+                       chinese_font=False):
     from pictor.xomics import FeatureExplorer
+
+    if chinese_font:
+      import matplotlib
+      matplotlib.rcParams['font.sans-serif'] = ['SimHei']
+      matplotlib.rcParams['axes.unicode_minus'] = False
 
     if title is None: title = self.data_name
     FeatureExplorer.explore(omix=self, title=title, fig_size=fig_size,
@@ -260,14 +266,20 @@ class Omix(Nomear):
   # region: IO
 
   @staticmethod
-  def load(file_path: str, verbose=True) -> 'Omix':
+  def load(file_path: str, allow_nan=False, features_to_ignore=(),
+           target_keys=None, target_label_spec=None, verbose=True) -> 'Omix':
     if file_path.endswith('xlsx'):
       import pandas as pd
       data_frames = pd.read_excel(file_path, sheet_name=None)
       data_name = os.path.basename(file_path).split('.')[0]
 
       # (1) Read features
-      df = data_frames.pop('Features')
+      # If data_frames has no 'Features' key, use the first sheet
+      feature_sheet_key = 'Features'
+      if feature_sheet_key not in data_frames:
+        feature_sheet_key = list(data_frames.keys())[0]
+      df = data_frames.pop(feature_sheet_key)
+
       feature_labels = df.columns.tolist()[1:]
       sample_labels = df.index.tolist()
       features = df.values[:, 1:]
@@ -275,41 +287,91 @@ class Omix(Nomear):
       # (1.1) Find legal indices from the first row
       indices, illegal_indices = [], []
       for i in range(features.shape[1]):
+        if feature_labels[i] in features_to_ignore: continue
         try:
           # (1.1.1) Exclude non-numerical values
           np.float32(features[0, i])
           # (1.1.2) Exclude columns with NaN
           x = np.array(features[:, i], dtype=np.float32)
-          if np.isnan(x).any(): raise ValueError
+          if np.isnan(x).any() and not allow_nan: raise ValueError
           indices.append(i)
         except:
           illegal_indices.append(i)
 
       features = np.array(features[:, indices], dtype=np.float32)
-      if verbose:
+      if verbose and len(illegal_indices) > 0:
         console.show_info(f'Illegal feature labels:')
         for i in illegal_indices:
           console.supplement(f'{feature_labels[i]}', level=2)
       feature_labels = [feature_labels[i] for i in indices]
 
       # (2) Read targets
-      df = data_frames.pop('Targets')
-      targets = df.values[:, 1:].flatten()
-      target_labels = df.columns.tolist()[1].split(',')[1:]
+      # (2.1) Separate targets from features if target_keys is provided
+      targets_sep = []
 
+      # Check target_label_spec
+      tgt_lb_provided = target_label_spec is not None
+      if tgt_lb_provided:
+        if len(target_label_spec) != len(target_keys): raise AssertionError(
+          '`target_label_spec` must have the same length as `target_keys`')
+      else: target_label_spec = []
+
+      if target_keys is not None:
+        for i, target_key in enumerate(target_keys):
+          # (2.1.1) Find the target_key in feature_labels
+          # Make sure target_key exists in feature_labels
+          if target_key not in feature_labels: raise KeyError(
+            f'!! target_key `{target_key}` not found in feature_labels')
+          j = feature_labels.index(target_key)
+
+          # (2.1.2) Put the target column into targets_sep
+          targets = features[:, j]
+          targets_sep.append(targets)
+
+          # (2.1.3) Extract the target column and remove it from features
+          features = np.delete(features, j, axis=1)
+          feature_labels.pop(j)
+
+          # (2.1.4) Generate target labels if not provided
+          if not tgt_lb_provided:
+            # Get unique targets as sorted list
+            unique_targets = list(sorted(set(targets)))
+            target_labels = [f'{ut}' for ut in unique_targets]
+            target_label_spec.append(target_labels)
+
+      # (2.2) Read targets from excel file if exists
+      if 'Targets' in data_frames:
+        df = data_frames.pop('Targets')
+        targets = df.values[:, 1:].flatten()
+        target_labels = df.columns.tolist()[1].split(',')[1:]
+      else:
+        # If no 'Targets' sheet, use the first target in targets_sep
+        if target_keys is None: raise AssertionError(
+          'You must specify `target_keys` if there is no `Targets` '
+          'sheet in the excel file')
+        targets = targets_sep[0]
+        target_labels = target_label_spec[0]
+
+      # Create Omix object
       omix = Omix(features, targets, feature_labels=feature_labels,
                   sample_labels=sample_labels, target_labels=target_labels,
                   data_name=data_name)
 
-      # Read target collections
+      # (2.3) Add targets separated from features if specified
+      if target_keys is not None:
+        for i, target_key in enumerate(target_keys):
+          omix.add_to_target_collection(
+            target_key, targets_sep[i], target_label_spec[i])
+
+      # (2.4) Read target collections
       for key, df in data_frames.items():
         # Consistent with the format in FeatureExplorer.save()
         if not key.startswith('Target-Collection-'): continue
         targets = df.values[:, 1:].flatten()
         mass = df.columns.tolist()[1].split(',')
         target_key = mass[0]
-        target_labels = mass[1:]
-        omix.add_to_target_collection(target_key, targets, target_labels)
+        target_labels_excel = mass[1:]
+        omix.add_to_target_collection(target_key, targets, target_labels_excel)
 
       return omix
 

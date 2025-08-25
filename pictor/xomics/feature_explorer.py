@@ -292,6 +292,9 @@ class FeatureExplorer(Plotter):
     if show_scatter: bp_fliers = False
 
     # (1) Plot boxplot
+    # (1.1) Remove NaNs
+    groups = [g[~np.isnan(g)] for g in groups]
+    # (1.2) Plot
     bp = ax.boxplot(groups, showfliers=bp_fliers, positions=positions)
     ax.set_xticklabels(labels)
 
