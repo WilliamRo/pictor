@@ -99,7 +99,16 @@ class Omix(Nomear):
     reports = []
     for n in range(self.features.shape[1]):
       features = self.features[:, n]
-      groups = [features[self.targets == i]
+      targets = self.targets.copy()
+
+      # Drop NaNs in features
+      nan_indices = np.where(np.isnan(features))[0]
+      if len(nan_indices) > 0:
+        features = np.delete(features, nan_indices)
+        targets = np.delete(targets, nan_indices)
+
+      # Formulate groups
+      groups = [features[targets == i]
                 for i, _ in enumerate(self.target_labels)]
       reports.append(single_factor_analysis(groups))
     return reports
@@ -326,6 +335,8 @@ class Omix(Nomear):
 
           # (2.1.2) Put the target column into targets_sep
           targets = features[:, j]
+          # TODO: Make sure targets starts from 0
+          targets = targets - np.min(targets)
           targets_sep.append(targets)
 
           # (2.1.3) Extract the target column and remove it from features
