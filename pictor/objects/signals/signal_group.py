@@ -27,7 +27,11 @@ class SignalGroup(Nomear):
 
   def __init__(self, signals, label=None, **properties):
     # Wrap data up if necessary
-    if isinstance(signals, np.ndarray): signals = DigitalSignal(signals)
+    if isinstance(signals, np.ndarray):
+      sfreq, ticks = properties.pop('sfreq', None), None
+      if sfreq is None: ticks = len(signals)
+      signals = DigitalSignal(
+        signals, sfreq, ticks, properties.pop('channel_names', None),)
     if isinstance(signals, DigitalSignal): signals = [signals]
 
     self.digital_signals: List[DigitalSignal] = signals

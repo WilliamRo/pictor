@@ -58,6 +58,9 @@ class EEG(SignalGroup):
   def SO(self): return self._ewr('SO', 0.5, 1)
 
   @property
+  def delta(self): return self._ewr('delta', 0.1, 4)
+
+  @property
   def delta_low(self): return self._ewr('delta_low', 0.1, 1.5)
 
   # K-complexes
@@ -99,7 +102,11 @@ class EEG(SignalGroup):
 
   # region: Signal Decomposition
 
-  def _extract_with_registration(self, key: str, low: float, high: float):
+  def _extract_with_registration(
+      self, key: str, low: float, high: float) -> np.ndarray:
+    """Extract the frequency band signal with registration.
+    Returns the signal of shape (n_channels, n_samples).
+    """
     if key not in self.components:
       data, config = self.extract_band(low, high, return_config=True)
       self.components[key] = (data, (low, high), config)
@@ -118,6 +125,11 @@ class EEG(SignalGroup):
     extracted_data = np.stack(signal_list, axis=0)
     if return_config: return extracted_data, config
     return extracted_data
+
+  def __getitem__(self, item):
+    """Support syntax like EEG['delta'] to extract the delta band signals."""
+    if hasattr(self, item): return getattr(self, item)
+    return SignalGroup.__getitem__(self, item)
 
   # endregion: Signal Decomposition
 
@@ -167,6 +179,7 @@ class EEG(SignalGroup):
     else: raise ValueError(f'!! Invalid reference pair: {src} -> {tgt}')
 
   def __getitem__(self, item: str):
+    # (1) Return channel signal directly if exists
     if item in self.channel_signal_dict:
       ds = self.channel_signal_dict[item]
       return ds[item]
@@ -178,6 +191,9 @@ class EEG(SignalGroup):
       x = self[item.replace('LER', 'CLE')]
       src_ref, tgt_ref = 'CLE', 'LER'
       return self.re_reference(x, src_ref, tgt_ref)
+
+    # (2) Return built-in component if exists
+    if hasattr(self, item): return getattr(self, item)
 
     raise KeyError(f'!! Signal label `{item}` not found')
 
