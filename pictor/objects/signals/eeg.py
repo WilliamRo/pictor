@@ -12,24 +12,116 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =-===========================================================================-
+from collections import OrderedDict
 from fnmatch import fnmatch
 from pictor.objects.signals.digital_signal import DigitalSignal
 from pictor.objects.signals.signal_group import SignalGroup
 
+import numpy as np
+
 
 
 class EEG(SignalGroup):
+  """A specialized SignalGroup for EEG signals. Note that only one digital
+  signal is allowed in this class.
+  """
 
   # region: Properties
+
+  @property
+  def sampling_frequency(self) -> float: return self.digital_signal.sfreq
 
   @property
   def digital_signal(self) -> DigitalSignal:
     assert len(self.digital_signals) == 1
     return self.digital_signals[0]
 
+  # region: Components
+
+  @SignalGroup.property(local=True)
+  def components(self) -> dict:
+    """Component dict for different frequency bands.
+
+    Usage (given eeg: EEG):
+      >> (s, (low, high), configs) = eeg.components['delta']
+      >> s.shape    # (n_channels, n_samples)
+      >> low, high  # (0.0, 4.0)
+      >> configs    # configs = {'method': 'butter', 'N': 4, 'Wn': [0.0, 4.0],
+                                 'output': 'ba', 'fs': 128.0, 'btype': 'band'}
+    """
+    return OrderedDict()
+
+  # region: Built-in Components
+
+  # Slow oscillations
+  @property
+  def SO(self): return self._ewr('SO', 0.5, 1)
+
+  @property
+  def delta_low(self): return self._ewr('delta_low', 0.1, 1.5)
+
+  # K-complexes
+  @property
+  def delta_high(self): return self._ewr('delta_high', 1.5, 4)
+
+  @property
+  def theta(self): return self._ewr('theta', 4, 8)
+
+  @property
+  def alpha(self): return self._ewr('alpha', 8, 12)
+
+  @property
+  def alpha_1(self): return self._ewr('alpha_1', 8, 10)
+
+  @property
+  def alpha_2(self): return self._ewr('alpha_2', 10, 12)
+
+  # Spindles
+  @property
+  def sigma(self): return self._ewr('sigma', 12, 16)
+
+  @property
+  def beta_1(self): return self._ewr('beta_1', 12, 20)
+
+  @property
+  def beta_2(self): return self._ewr('beta_2', 20, 30)
+
+  @property
+  def gamma_1(self): return self._ewr('gamma_1', 30, 45)
+
+  # endregion: Built-in Components
+
+  # endregion: Components
+
   # endregion: Properties
 
   # region: Public Methods#
+
+  # region: Signal Decomposition
+
+  def _extract_with_registration(self, key: str, low: float, high: float):
+    if key not in self.components:
+      data, config = self.extract_band(low, high, return_config=True)
+      self.components[key] = (data, (low, high), config)
+    return self.components[key][0]
+  _ewr = _extract_with_registration  # alias
+
+  def extract_band(self, low: float, high: float, return_config=False):
+    """Extract the frequency band signal from the EEG signal.
+    Returns the signal of shape (n_channels, n_samples) with config if required.
+    """
+    signal_list = []
+    for s in self.digital_signal.signals:
+      component, config = self.extract_component(
+        s, self.sampling_frequency, low, high, return_config=True)
+      signal_list.append(component)
+    extracted_data = np.stack(signal_list, axis=0)
+    if return_config: return extracted_data, config
+    return extracted_data
+
+  # endregion: Signal Decomposition
+
+  # region: MISC
 
   @classmethod
   def extract_eeg_channels_from_sg(
@@ -88,5 +180,7 @@ class EEG(SignalGroup):
       return self.re_reference(x, src_ref, tgt_ref)
 
     raise KeyError(f'!! Signal label `{item}` not found')
+
+  # endregion: MISC
 
   # endregion: Public Methods

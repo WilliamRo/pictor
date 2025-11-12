@@ -84,6 +84,18 @@ class SignalGroup(Nomear):
 
   # region: Public Methods
 
+  # region: Sub-class Conversion
+
+  def as_eeg(self, digital_signal_index=0):
+    from pictor.objects.signals.eeg import EEG
+
+    eeg = EEG(signals=[self.digital_signals[digital_signal_index]],
+              label=self.label, **self.properties)
+    eeg.annotations = self.annotations
+    return eeg
+
+  # endregion: Sub-class Conversion
+
   # region: Special Methods
 
   def truncate(self, start_time=0, end_time=-1, return_new_sg=False):
@@ -134,6 +146,40 @@ class SignalGroup(Nomear):
   # endregion: Public Methods
 
   # region: Static Methods
+
+  @staticmethod
+  def extract_component(s: np.ndarray, sfreq: float, low: float, high: float,
+                        method='butter', return_config: bool=False,
+                        **kwargs):
+    """Extract the frequency band signal from a given signal s with shape (L,).
+    """
+    # Sanity check
+    assert 0 <= low < high <= sfreq / 2
+
+    # Butterworth filter
+    if method in ('butter', 'butterworth'):
+      from scipy.signal import butter
+
+      configs = {'N': 4, 'Wn': [low, high], 'btype': 'band',
+                 'output': 'ba',  'fs': sfreq}
+      configs.update(kwargs)
+
+      bout = configs.get('output', 'ba')
+
+      if bout == 'sos':
+        from scipy.signal import sosfilt
+        sos = butter(**configs)
+        component = sosfilt(sos, s)
+      elif bout == 'ba':
+        from scipy.signal import filtfilt
+        b, a = butter(**configs)
+        component = filtfilt(b, a, s)
+
+    else: raise NotImplementedError(f'!! Method `{method}` not implemented.')
+
+    if not return_config: return component
+    configs['method'] = method
+    return component, configs
 
   # endregion: Static Methods
 

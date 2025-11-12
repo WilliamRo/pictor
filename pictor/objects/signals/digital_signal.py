@@ -61,6 +61,11 @@ class DigitalSignal(Nomear):
     return np.arange(len(self.data)) / self.sfreq + self.off_set
 
   @property
+  def signals(self):
+    """Return a list of signal."""
+    return [self.data[:, i] for i in range(self.num_channels)]
+
+  @property
   def length(self): return len(self.data)
 
   @property
