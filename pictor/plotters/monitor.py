@@ -163,6 +163,8 @@ class Monitor(Plotter):
 
     margin = 0.05
     for i, (name, x, y) in enumerate(channels):
+      y[y == None] = np.mean(y[y != None])
+
       # Normalized y before plot
       if not smart_scale:
         y = y - min(y)

@@ -142,8 +142,12 @@ class DigitalSignal(Nomear):
     assert 0 <= percentile <= 100
     key = (name, percentile)
     if not self.in_pocket(key):
-      self.put_into_pocket(key, np.percentile(self[name], percentile),
-                           local=True)
+      data = self[name]
+      # Take care of None (np.isnan does not work for None)
+      data = data[data != None]
+      value = np.percentile(data, percentile)
+      assert value is not None
+      self.put_into_pocket(key, value, local=True)
     return self.get_from_pocket(key)
 
   @staticmethod
