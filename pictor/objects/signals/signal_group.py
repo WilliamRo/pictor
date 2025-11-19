@@ -41,27 +41,27 @@ class SignalGroup(Nomear):
 
   # region: Properties
 
-  @Nomear.property()
+  @Nomear.property(local=True)
   def channel_names(self):
     results = []
     for ds in self.digital_signals: results.extend(ds.channels_names)
     return results
 
-  @Nomear.property()
+  @Nomear.property(local=True)
   def name_tick_data_list(self):
     res = []
     for ds in self.digital_signals:
       res.extend(ds.name_tick_data_list)
     return res
 
-  @Nomear.property()
+  @Nomear.property(local=True)
   def name_tick_data_dict(self):
     res = {}
     for ds in self.digital_signals:
       for name, tick, data in ds.name_tick_data_list: res[name] = (tick, data)
     return res
 
-  @Nomear.property()
+  @Nomear.property(local=True)
   def channel_signal_dict(self):
     """Returns {name: ds} dict in which ds contains `name` channel"""
     res = {}
@@ -93,10 +93,14 @@ class SignalGroup(Nomear):
   def as_eeg(self, digital_signal_index=0):
     from pictor.objects.signals.eeg import EEG
 
-    eeg = EEG(signals=[self.digital_signals[digital_signal_index]],
-              label=self.label, **self.properties)
-    eeg.annotations = self.annotations
-    return eeg
+    KEY = 'SELF_AS_EEG'
+    if not self.in_pocket(KEY):
+      eeg = EEG(signals=[self.digital_signals[digital_signal_index]],
+                label=self.label, **self.properties)
+      eeg.annotations = self.annotations
+      self.put_into_pocket(KEY, eeg, local=True)
+
+    return self.get_from_pocket(KEY)
 
   # endregion: Sub-class Conversion
 

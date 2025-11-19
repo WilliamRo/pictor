@@ -74,23 +74,23 @@ class EEG(SignalGroup):
   def alpha(self): return self._ewr('alpha', 8, 12)
 
   @property
-  def alpha_1(self): return self._ewr('alpha_1', 8, 10)
+  def alpha_low(self): return self._ewr('alpha_low', 8, 10)
 
   @property
-  def alpha_2(self): return self._ewr('alpha_2', 10, 12)
+  def alpha_high(self): return self._ewr('alpha_high', 10, 12)
 
   # Spindles
   @property
   def sigma(self): return self._ewr('sigma', 12, 16)
 
   @property
-  def beta_1(self): return self._ewr('beta_1', 12, 20)
+  def beta_low(self): return self._ewr('beta_low', 12, 20)
 
   @property
-  def beta_2(self): return self._ewr('beta_2', 20, 30)
+  def beta_high(self): return self._ewr('beta_high', 20, 30)
 
   @property
-  def gamma_1(self): return self._ewr('gamma_1', 30, 45)
+  def gamma_low(self): return self._ewr('gamma_low', 30, 45)
 
   # endregion: Built-in Components
 
@@ -125,6 +125,23 @@ class EEG(SignalGroup):
     extracted_data = np.stack(signal_list, axis=0)
     if return_config: return extracted_data, config
     return extracted_data
+
+  def get_band_as_sg(self, band_key: str, channel_index=None) -> SignalGroup:
+    """Get the frequency band signal as an EEG SignalGroup."""
+    s = self[band_key]
+    channel_names = self.channel_names
+
+    if channel_index is not None:
+      s = s[channel_index][np.newaxis, :]
+      channel_names = [self.channel_names[channel_index]]
+
+    s = s.transpose()
+    ds = DigitalSignal(s, sfreq=self.sampling_frequency,
+                       channel_names=channel_names)
+    sg = SignalGroup([ds])
+    sg.annotations = self.annotations
+
+    return sg
 
   def __getitem__(self, item):
     """Support syntax like EEG['delta'] to extract the delta band signals."""
