@@ -59,6 +59,9 @@ class Monitor(Plotter):
     self.new_settable_attr('anno_legend', None, bool,
                            'Option to show legends of annotations')
 
+    self.new_settable_attr('properties_to_show', '', str,
+                           'SG properties to show in title')
+
   # region: Properties
 
   @property
@@ -201,6 +204,12 @@ class Monitor(Plotter):
     ax.grid(color='#E03', alpha=0.4)
 
     tail = f' (xi={self.get("xi")})' if smart_scale else ''
+
+    properties_to_show = self.get('properties_to_show')
+    if properties_to_show not in (None, ''):
+      for key in properties_to_show.split(','):
+        tail += f', {key}: {s.properties[key]}'
+
     ax.set_title(s.label + tail)
 
   def _plot_annotation(self, ax: plt.Axes, s: Scrolling):
