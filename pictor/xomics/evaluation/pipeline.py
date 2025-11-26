@@ -466,8 +466,12 @@ class Pipeline(Nomear):
 
     # (B-3) Test model on test data
     omix_reduced = reducer.reduce_dimension(omix)
-    prob = sk_model.predict_proba(omix_reduced.features)
+
     pred = sk_model.predict(omix_reduced.features)
+    if not omix.targets_are_numerical:
+      prob = sk_model.predict_proba(omix_reduced.features)
+    else:
+      prob = pred
 
     return FitPackage.pack(pred, prob, omix, hp=hp,
                            models=(sk_model,), reducers=(reducer,))
