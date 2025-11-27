@@ -114,6 +114,10 @@ class Pipeline(Nomear):
 
   # region: Feature Selection
 
+  def clear_sub_space(self):
+    """Clear all sub-spaces stored in sub_space_dict."""
+    self.sub_space_dict.clear()
+
   def create_sub_space(self, method: str='*', repeats=1, nested=0,
                        show_progress=1, **kwargs):
     """Reduce dimension of self.omix and put the result into sub_space_dict.

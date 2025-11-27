@@ -222,7 +222,8 @@ class Omix(Nomear):
   # region: Pipeline
 
   def pipeline(self, sf: str = 'ucp', ml: str = 'lr',
-               r: int = 1, k: int = 50, t: float = 0.8, report: int = 0):
+               r: int = 1, k: int = 50, t: float = 0.8, report: int = 0,
+               clear_subspace=True):
     """Run `feature selection` -> `machine learning` pipeline
 
     :param sf: feature selection methods. Examples: 'ucp;lasso', 'lasso'
@@ -235,6 +236,8 @@ class Omix(Nomear):
     from pictor.xomics.evaluation.pipeline import Pipeline
 
     pi = Pipeline(self, ignore_warnings=1, save_models=0)
+
+    if clear_subspace: pi.clear_sub_space()
 
     # (1) Feature selection
     kwargs = {'repeats': r, 'nested': True, 'threshold': t,
