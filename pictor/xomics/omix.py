@@ -614,22 +614,39 @@ class Omix(Nomear):
 
   def select_samples(self, indices: Iterable=None, data_name='Selected',
                      target_labels=None) -> 'Omix':
+    """Select samples by indices or target_labels. Note that target_labels
+    can be provided in a nested way, e.g., ('OSA', ('T1N', 'IH'))
+    """
     dup_dict = {}
 
+    # Determine indices according to target_labels if provided
     if target_labels is not None:
+      target_labels_flat = []
       indices = []
       targets = []
       for i, tl in enumerate(target_labels):
+        # Case of nested target labels
+        if isinstance(tl, (list, tuple)):
+          for sub_tl in tl:
+            group_index = self.target_labels.index(sub_tl)
+            indices.extend(self.groups[group_index])
+            targets.extend([i] * len(self.groups[group_index]))
+          target_labels_flat.append(','.join(tl))
+          continue
+
+        # Case of single target label
+        target_labels_flat.append(tl)
         group_index = self.target_labels.index(tl)
         indices.extend(self.groups[group_index])
         targets.extend([i] * len(self.groups[group_index]))
 
       # Target labels should be reset
-      dup_dict['target_labels'] = target_labels
+      dup_dict['target_labels'] = target_labels_flat
       dup_dict['targets'] = np.array(targets)
 
     assert isinstance(indices, Iterable)
 
+    # Select sample according to indices
     label_array = np.array(self.sample_labels)
     features, targets, sample_labels = [], [], []
     for i in indices:
