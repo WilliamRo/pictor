@@ -136,7 +136,7 @@ class SignalGroup(Nomear):
     return sg
 
   def convert_to_epochs(self, epoch_len_sec, channel_names: list = None,
-                        verbose=True):
+                        verbose=True, return_channel_names=False):
     """Returns a list of short-time multi-channel epochs (in order):
        [epoch_1, epoch_2, ..., epoch_N], each epoch has shape (L, n_channels),
        here L = epoch_len_sec * sfreq, n_channels = len(channel_names).
@@ -162,7 +162,8 @@ class SignalGroup(Nomear):
     # IV. Assert and return
     assert isinstance(epochs, list)
     assert epochs[0].shape == (epoch_len_samples, data.shape[1])
-    return epochs
+    if not return_channel_names: return epochs
+    return epochs, sg.channel_names
 
   def __getitem__(self, item):
     if item not in self.channel_signal_dict:
