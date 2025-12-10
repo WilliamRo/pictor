@@ -82,7 +82,6 @@ class DigitalSignal(Nomear):
     return {name: self.data[:, i]
             for i, name in enumerate(self.channels_names)}
 
-
   # endregion: Properties
 
   # region: Special Methods
@@ -117,6 +116,31 @@ class DigitalSignal(Nomear):
   # endregion: Special Methods
 
   # region: Public Methods
+
+  def resample(self, sfreq, verbose=True) -> 'DigitalSignal':
+    """Resample this digital signal to a new sampling frequency."""
+    from scipy.signal import resample
+
+    if sfreq == self.sfreq: return self
+    assert sfreq > 0
+
+    # Resample data
+    num_samples = int(self.length * sfreq / self.sfreq)
+    resampled_data = resample(self.data, num_samples, axis=0)
+
+    # Take care of ticks
+    if self._ticks is not None: resampled_ticks = np.linspace(
+      self._ticks[0], self._ticks[-1], num_samples)
+    else: resampled_ticks = None
+
+    # Verbose
+    if verbose: console.show_status(
+        f'Resampled DigitalSignal `{self.label}` from {self.sfreq}Hz to '
+        f'{sfreq}Hz.', prompt='[DigitalSignal] >>')
+
+    # Wrap and return
+    return DigitalSignal(resampled_data, sfreq, resampled_ticks,
+                         self.channels_names, self.label, self.off_set)
 
   def add_channel(self, sequence: np.ndarray, name=None):
     assert not self.in_pocket('name_tick_data_list')

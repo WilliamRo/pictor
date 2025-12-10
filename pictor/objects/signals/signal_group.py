@@ -135,6 +135,35 @@ class SignalGroup(Nomear):
     sg.annotations = self.annotations
     return sg
 
+  def convert_to_epochs(self, epoch_len_sec, channel_names: list = None,
+                        verbose=True):
+    """Returns a list of short-time multi-channel epochs (in order):
+       [epoch_1, epoch_2, ..., epoch_N], each epoch has shape (L, n_channels),
+       here L = epoch_len_sec * sfreq, n_channels = len(channel_names).
+    """
+    # I. Extract channels
+    if channel_names is not None: sg = self.extract_channels(channel_names)
+    else: sg = self
+
+    # II. Merge digital signals as data (shape = [L, C])
+    max_sfreq = max([ds.sfreq for ds in sg.digital_signals])
+    ds_list = [ds.resample(max_sfreq, verbose) for ds in sg.digital_signals]
+
+    # data.shape = [L, C]
+    data = np.concatenate([ds.data for ds in ds_list], axis=-1)
+
+    # III. Generate epochs, abandon incomplete epoch at the end
+    epoch_len_samples = int(epoch_len_sec * max_sfreq)
+    n_epochs = data.shape[0] // epoch_len_samples
+    data = data[: n_epochs * epoch_len_samples]
+
+    epochs = np.split(data, n_epochs, axis=0)
+
+    # IV. Assert and return
+    assert isinstance(epochs, list)
+    assert epochs[0].shape == (epoch_len_samples, data.shape[1])
+    return epochs
+
   def __getitem__(self, item):
     if item not in self.channel_signal_dict:
       raise KeyError(f'!! Signal label `{item}` not found')
