@@ -136,8 +136,9 @@ class SignalGroup(Nomear):
     return sg
 
   def convert_to_epochs(self, epoch_len_sec, channel_names: list = None,
-                        verbose=True, return_channel_names=False):
-    """Returns a list of short-time multi-channel epochs (in order):
+                        verbose=True, return_channel_names=False,
+                        force_order=True):
+    """Returns a list of short-time multi-channel epochs (may be not in order):
        [epoch_1, epoch_2, ..., epoch_N], each epoch has shape (L, n_channels),
        here L = epoch_len_sec * sfreq, n_channels = len(channel_names).
     """
@@ -151,6 +152,12 @@ class SignalGroup(Nomear):
 
     # data.shape = [L, C]
     data = np.concatenate([ds.data for ds in ds_list], axis=-1)
+    if force_order:
+      # Reorder data to `channel_names`
+      current_order = sg.channel_names
+      data = np.concatenate(
+        [data[:, current_order.index(ck)].reshape([-1, 1])
+         for ck in channel_names], axis=-1)
 
     # III. Generate epochs, abandon incomplete epoch at the end
     epoch_len_samples = int(epoch_len_sec * max_sfreq)
