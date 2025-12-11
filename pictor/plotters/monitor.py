@@ -166,7 +166,9 @@ class Monitor(Plotter):
 
     margin = 0.05
     for i, (name, x, y) in enumerate(channels):
-      y[y == None] = np.mean(y[y != None])
+      # Handle None or np.nan in y, if None or np.nan exists,
+      # replace them with mean
+      if np.any(np.isnan(y)): y[np.isnan(y)] = np.mean(y[~np.isnan(y)])
 
       # Normalized y before plot
       if not smart_scale:
