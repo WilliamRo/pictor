@@ -106,6 +106,11 @@ class SignalGroup(Nomear):
 
   # region: Special Methods
 
+  def band_filter(self, low, high, method='butter'):
+    """Band-pass filter all digital signals in this SignalGroup"""
+    for ds in self.digital_signals:
+      ds.band_filter(low, high, method=method)
+
   def truncate(self, start_time=0, end_time=-1, return_new_sg=False):
     """Truncate signal from `start_time` to `end_time`"""
     # Truncate digital signals
@@ -192,39 +197,7 @@ class SignalGroup(Nomear):
 
   # region: Static Methods
 
-  @staticmethod
-  def extract_component(s: np.ndarray, sfreq: float, low: float, high: float,
-                        method='butter', return_config: bool=False,
-                        **kwargs):
-    """Extract the frequency band signal from a given signal s with shape (L,).
-    """
-    # Sanity check
-    assert 0 <= low < high <= sfreq / 2
-
-    # Butterworth filter
-    if method in ('butter', 'butterworth'):
-      from scipy.signal import butter
-
-      configs = {'N': 4, 'Wn': [low, high], 'btype': 'band',
-                 'output': 'ba',  'fs': sfreq}
-      configs.update(kwargs)
-
-      bout = configs.get('output', 'ba')
-
-      if bout == 'sos':
-        from scipy.signal import sosfilt
-        sos = butter(**configs)
-        component = sosfilt(sos, s)
-      elif bout == 'ba':
-        from scipy.signal import filtfilt
-        b, a = butter(**configs)
-        component = filtfilt(b, a, s)
-
-    else: raise NotImplementedError(f'!! Method `{method}` not implemented.')
-
-    if not return_config: return component
-    configs['method'] = method
-    return component, configs
+  extract_component = DigitalSignal.extract_component
 
   # endregion: Static Methods
 

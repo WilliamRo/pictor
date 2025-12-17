@@ -243,6 +243,49 @@ class DigitalSignal(Nomear):
 
   # region: Operations
 
+  # region: Signal Processing
+
+  def band_filter(self, low, high, method='butter'):
+    """Bandpass filter each channel of this digital signal."""
+    self.data = self.extract_component(
+      self.data, self.sfreq, low, high, method=method, axis=0)
+
+  @staticmethod
+  def extract_component(s: np.ndarray, sfreq: float, low: float, high: float,
+                        method='butter', return_config: bool=False,
+                        axis=0, **kwargs):
+    """Extract the frequency band signal from a given signal s with shape (L,).
+    """
+    # Sanity check
+    assert 0 <= low < high <= sfreq / 2
+
+    # Butterworth filter
+    if method in ('butter', 'butterworth'):
+      from scipy.signal import butter
+
+      configs = {'N': 4, 'Wn': [low, high], 'btype': 'band',
+                 'output': 'ba',  'fs': sfreq}
+      configs.update(kwargs)
+
+      bout = configs.get('output', 'ba')
+
+      if bout == 'sos':
+        from scipy.signal import sosfilt
+        sos = butter(**configs)
+        component = sosfilt(sos, s, axis=axis)
+      elif bout == 'ba':
+        from scipy.signal import filtfilt
+        b, a = butter(**configs)
+        component = filtfilt(b, a, s, axis=axis)
+
+    else: raise NotImplementedError(f'!! Method `{method}` not implemented.')
+
+    if not return_config: return component
+    configs['method'] = method
+    return component, configs
+
+  # endregion: Signal Processing
+
   # region: STFT
 
   @staticmethod
