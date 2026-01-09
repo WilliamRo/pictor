@@ -168,6 +168,7 @@ class Monitor(Plotter):
     for i, (name, x, y) in enumerate(channels):
       # Handle None or np.nan in y, if None or np.nan exists,
       # replace them with mean
+      y = np.where(y == None, np.nan, y).astype(np.float64)
       if np.any(np.isnan(y)): y[np.isnan(y)] = np.mean(y[~np.isnan(y)])
 
       # Normalized y before plot
