@@ -247,15 +247,15 @@ class Annotation(Nomear):
     return np.array(ticks), np.array(values)
 
   def truncate(self, start_time, end_time):
-    if end_time in (None, -1): end_time = self.intervals[-1][1]
-
-    assert start_time < end_time
+    if end_time in (None, -1):
+      end_time = max([interval[1] for interval in self.intervals])
 
     inter, anno = [], (None if self.is_for_events else [])
-    for i, interval in enumerate(self.intervals):
-      if interval[0] >= end_time or interval[1] <= start_time: continue
-      inter.append((max(interval[0], start_time), min(interval[1], end_time)))
-      if not self.is_for_events: anno.append(self.annotations[i])
+    if start_time < end_time:
+      for i, interval in enumerate(self.intervals):
+        if interval[0] >= end_time or interval[1] <= start_time: continue
+        inter.append((max(interval[0], start_time), min(interval[1], end_time)))
+        if not self.is_for_events: anno.append(self.annotations[i])
 
     return Annotation(inter, anno, labels=self.labels)
 
