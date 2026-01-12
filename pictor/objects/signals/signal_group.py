@@ -247,6 +247,8 @@ class Annotation(Nomear):
     return np.array(ticks), np.array(values)
 
   def truncate(self, start_time, end_time):
+    if end_time in (None, -1): end_time = self.intervals[-1][1]
+
     assert start_time < end_time
 
     inter, anno = [], (None if self.is_for_events else [])

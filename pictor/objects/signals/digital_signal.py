@@ -94,7 +94,7 @@ class DigitalSignal(Nomear):
     # Case 1, e.g., ds[10:20]
     if isinstance(item, slice):
       start_time = self.ticks[0] if item.start is None else item.start
-      end_time = self.ticks[-1] if item.stop is None else item.stop
+      end_time = self.ticks[-1] if item.stop in (None, -1) else item.stop
       start_index = np.argwhere(self.ticks >= start_time).ravel()[0]
       stop_index = np.argwhere(self.ticks < end_time).ravel()[-1]
 
