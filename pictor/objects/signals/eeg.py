@@ -119,8 +119,9 @@ class EEG(SignalGroup):
     """
     signal_list = []
     for s in self.digital_signal.signals:
-      component, config = self.extract_component(
-        s, self.sampling_frequency, low, high, return_config=True)
+      # component, config = self.extract_component(
+      component, config = EEG.extract_component(
+          s, self.sampling_frequency, low, high, return_config=True)
       signal_list.append(component)
     extracted_data = np.stack(signal_list, axis=0)
     if return_config: return extracted_data, config

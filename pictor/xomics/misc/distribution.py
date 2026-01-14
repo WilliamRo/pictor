@@ -27,6 +27,9 @@ def remove_outliers(data: np.ndarray, alpha=1.5):
   single_sequence = len(data.shape) == 1
   if single_sequence: data = data[:, np.newaxis]
 
+  # Remove rows with NaN or None values
+  data = data[~np.isnan(data).any(axis=1)]
+
   for i in range(data.shape[1]):
     x = data[:, i]
     q1, q3 = np.percentile(x, [25, 75])
@@ -42,7 +45,6 @@ def remove_outliers_for_list(*data_list, alpha=1.5):
   data = np.stack(data_list, axis=-1)
   data = remove_outliers(data, alpha)
   return [data[:, i] for i in range(data.shape[1])]
-
 
 
 def get_x_position_over_boxplot(y: np.ndarray, c=1.0):
