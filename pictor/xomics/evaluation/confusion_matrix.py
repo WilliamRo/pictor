@@ -51,6 +51,7 @@ class ConfusionMatrix(object):
     self.macro_recall, self.weighted_recall = None, None
     self.macro_F1, self.weighted_F1 = None, None
     self.accuracy = None
+    self.cohen_kappa = None
     self.missed_indices = None
 
 
@@ -113,6 +114,11 @@ class ConfusionMatrix(object):
       np.average(val, weights=support) for val in values]
 
     self.accuracy = np.sum(self.TPs) / total
+
+    # Cohen's kappa
+    p_o = self.accuracy
+    p_e = np.sum(support * (np.sum(cm, axis=1))) / (total * total)
+    self.cohen_kappa = ((p_o - p_e) / (1 - p_e)) if p_e < 1.0 else 1.0
 
     # Set variables
     self.total = total
