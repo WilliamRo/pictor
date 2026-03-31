@@ -62,6 +62,15 @@ class Monitor(Plotter):
     self.new_settable_attr('properties_to_show', '', str,
                            'SG properties to show in title')
 
+    self.new_settable_attr('tick_unit', 'sec', str,
+                           'Unit of ticks, can be `sec` or `hour`')
+
+    self.new_settable_attr('rem_last', True, bool,
+                           'Whether to put REM stage at last')
+
+    self.new_settable_attr('show_signal', True, bool,
+                           'Whether to show signal curves')
+
   # region: Properties
 
   @property
@@ -186,12 +195,26 @@ class Monitor(Plotter):
       # Plot normalized y
       color, zorder = 'black', 10
       if 0 < hl_id != i + 1: color, zorder = '#AAA', None
-      ax.plot(x, y, color=color, linewidth=1, zorder=zorder)
+
+      if self.get('show_signal'):
+        ax.plot(x, y, color=color, linewidth=1, zorder=zorder)
 
     # Set xlim (make sure display interval \in data interval)
     tick_list = [x for _, x, _ in channels]
     ax.set_xlim(max([x[0] for x in tick_list]),
                 min([x[-1] for x in tick_list]))
+
+    # Format x-axis labels based on tick_unit
+    if self.get('tick_unit') == 'hour':
+      ticks = ax.get_xticks()
+      formatted_labels = []
+      for tick_val in ticks:
+        total_secs = int(tick_val)
+        hours = total_secs // 3600
+        minutes = (total_secs % 3600) // 60
+        secs = total_secs % 60
+        formatted_labels.append(f'{hours:02d}:{minutes:02d}:{secs:02d}')
+      ax.set_xticklabels(formatted_labels)
 
     # Set y_ticks
     ax.set_yticks([N - i - 0.5 for i in range(N)])
@@ -204,7 +227,7 @@ class Monitor(Plotter):
 
     # Set styles
     ax.set_ylim(0, N)
-    ax.grid(color='#E03', alpha=0.4)
+    # ax.grid(color='#E03', alpha=0.4)
 
     tail = f' (xi={self.get("xi")})' if smart_scale else ''
 
@@ -247,7 +270,42 @@ class Monitor(Plotter):
 
   def _plot_stage(self, left_ax: plt.Axes, right_ax: plt.Axes,
                   package, config: Arguments, index):
+    # e.g., values = [0, 1, 2, 2, ...], labels = ['W', 'N1', 'N2', 'N3', 'REM']
     ticks, values, labels = package
+
+    # Apply REM position logic
+    if 'REM' in labels:
+      rem_idx = labels.index('REM')
+      target_idx = len(labels) - 1 if self.get('rem_last') else 1
+
+      if rem_idx != target_idx:
+        # Create mapping: move REM to target position
+        mapping = {}
+        if target_idx > rem_idx:
+          # Moving REM forward (toward end)
+          for i in range(len(labels)):
+            if i < rem_idx:
+              mapping[i] = i
+            elif i == rem_idx:
+              mapping[i] = target_idx
+            else:
+              mapping[i] = i - 1
+        else:
+          # Moving REM backward (toward start)
+          for i in range(len(labels)):
+            if i < target_idx:
+              mapping[i] = i
+            elif i == rem_idx:
+              mapping[i] = target_idx
+            else:
+              mapping[i] = i - 1 if i > rem_idx else i + 1
+
+        # Remap values using the mapping
+        values = np.array([mapping[int(v)] for v in values])
+
+        # Reorder labels: remove REM and insert at target position
+        labels = [labels[i] for i in range(len(labels)) if i != rem_idx]
+        labels.insert(target_idx if target_idx <= rem_idx else target_idx - 1, 'REM')
 
     # Determine color
     color = config.arg_dict.get('color', None)
